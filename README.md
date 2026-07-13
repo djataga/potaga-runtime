@@ -1,6 +1,6 @@
 # potaga-runtime
 
-Phase 1 + 3 + 4 + 5 reference implementation of the Potaga orchestration runtime. It consumes the
+Complete reference implementation (roadmap Phases 1 + 3–6) of the Potaga orchestration runtime. It consumes the
 [potaga prompt pack](https://github.com/djataga/potaga) (v4.2) and wires the dispatch path end-to-end.
 Phase 1: agent loop, planning document, task decomposition. Phase 3: multi-model
 routing — the five-stage CQP pipeline, OpenAI-compatible adapters (GPT-5.6 Sol/Terra,
@@ -54,8 +54,19 @@ GLM-5.2), Sol Ultra containment, and full §B.5 fallback-chain escalation.
 | Dependency cycles | §7.1, policy §B.8 | topological detection after decomposition; each cycle broken at its lowest-priority edge (never a security task's dependency), marked optional, logged as an auto-resolved conflict card. |
 | Waiting-cycle scan | §7.2–7.4 | `scan_waiting_cycles()` — the 60-second scan's core: detects agent wait cycles and names the lowest-priority victim for preemption (state save to its cache partition is the caller's job). Ready for parallel dispatch. |
 
-**Still ahead** (seams in place): the full gate engine and code sandbox (Phase 6),
-true parallel dispatch.
+## Phase 6 additions — Safety Guardrails & Gates
+
+| Module | Policy / spec | Notes |
+|---|---|---|
+| `gates.py` — GateEngine | §B.4, spec §11 | post-merge: Coder completion requires `sandbox_verified` and scope ≤1.3× (`[SCOPE REJECTION: ratio]` on breach); Tester completion requires coverage ≥ threshold; Reviewer verdicts parsed — `[REJECTED: …]` re-opens the coder dependency with feedback (max 2×, then `blocked: needs-human` + `[HUMAN REQUIRED]`), and a review with **no explicit verdict is treated as rejection** (never approve silently). Pre-dispatch: docs tasks wait for reviewer `[APPROVED]`. |
+| Gate blocks ≠ model failures | §B.5 boundary | coverage/sandbox/scope/review blocks are quality outcomes: terminal for the dispatch, never walked down the fallback chain. |
+| `tools/sandbox.py` | spec §11.5 | `run_code`: Python in an isolated subprocess (`python -I`), jailed to the task workdir under the code store, wall-clock timeout, CPU/memory rlimits, stripped env, socket creation disabled in the child. Honest scope: process-level isolation for a reference runtime — production needs container/VM isolation; this module is that seam. |
+| Tool access matrix | spec §8.4 | `run_code` granted to coder/tester/reviewer/docs only; architect/research never see it, and out-of-allowlist calls are still blocked pre-execution. |
+| Token budgets | spec §11.2 | per-subtask output budget (est_tokens_out × 3, floor 2048); overflow interrupts the turn loop, posts `blocked: token-budget`, and logs a budget event — retry/re-route stays with the Orchestrator. |
+
+With Phase 6, all ten policy points of `prompts/07_orchestrator.md` §B have running code
+behind them. Remaining beyond the roadmap: true parallel dispatch (the waiting-cycle
+scanner from Phase 5 is ready for it) and container-grade sandbox isolation.
 
 ## Quick start
 
@@ -86,7 +97,7 @@ degrades gracefully). Check current model names at https://docs.claude.com.
 POTAGA_REPO=/path/to/potaga python -m pytest tests/ -q
 ```
 
-46 tests, fully offline: config invariants (including rejection of the dead-xhigh config the
+59 tests, offline (sandbox tests run real subprocesses): config invariants (including rejection of the dead-xhigh config the
 v4.2 audit fixed), pricing-epoch switching, multiplier math, degraded-mode routing, the
 security floor, plan parsing and single-writer rendering, store grants and path-escape
 protection, and an end-to-end dry run asserting artifacts, provenance, statuses, and the
@@ -103,7 +114,11 @@ acceptance and sub-margin escalation, the spec's Conflict #001 scenario (huge ma
 overridden by a security hard constraint), every L1 tie-break in order, binding
 arbiter decisions, L2/L3 hooks with the [HUMAN REQUIRED] event, cycle breaking that
 spares security tasks, wait-cycle victim selection, and resolved cards rendered into
-the plan.
+the plan. Phase 6 adds: sandbox execution/network-block/timeout, the run_code round
+trip through the turn loop, per-agent tool grants, token-budget interruption,
+coverage/sandbox/scope gates, the reviewer rejection→re-open→needs-human loop,
+silent reviews treated as rejections, the docs approval gate, and an e2e proof that
+gate blocks never trigger model-chain escalation.
 
 ## Layout
 

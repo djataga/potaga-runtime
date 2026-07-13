@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Dict, List
 
 from ..config import Config
+from ..tools.sandbox import Sandbox
 from ..events import EventBus, EventType
 from ..memory import MemoryStores, StoreGrant
 from ..plan import Task
@@ -25,6 +26,19 @@ PROMPT_FILES = {
     "architect": "01_architect.md", "coder": "02_coder.md", "tester": "03_tester.md",
     "reviewer": "04_reviewer.md", "docs": "05_docs.md", "research": "06_research.md",
 }
+
+RUN_CODE_TOOL = {
+    "name": "run_code",
+    "description": "Execute Python in the sandboxed environment (no network, "
+                   "jailed to your task workdir under the code store). Returns "
+                   "exit_code, stdout, stderr. Use it to verify your work before "
+                   "posting completion.",
+    "input_schema": {"type": "object", "properties": {"code": {"type": "string"}},
+                     "required": ["code"]},
+}
+
+# tool access matrix: code execution for coder/tester/reviewer/docs only
+CODE_EXEC_AGENTS = {"coder", "tester", "reviewer", "docs"}
 
 TOOLS = [
     {
@@ -94,10 +108,19 @@ def _estimate_tokens(messages: List[Dict]) -> int:
     return sum(len(json.dumps(m)) for m in messages) // 4
 
 
+def tools_for(agent: str) -> List[Dict]:
+    base = list(TOOLS)
+    if agent in CODE_EXEC_AGENTS:
+        base.append(RUN_CODE_TOOL)
+    return base
+
+
 class AgentRunner:
     MAX_TURNS = 8
     # context-eviction threshold (logical tokens); operator-tunable
     CONTEXT_LIMIT = 24000
+    # per-subtask output-token budget = est_tokens_out × this factor (spec §11.2)
+    TOKEN_BUDGET_FACTOR = 3.0
 
     def __init__(self, stores: MemoryStores, bus: EventBus, config: Config,
                  context_limit: int | None = None) -> None:
@@ -110,6 +133,10 @@ class AgentRunner:
         session_id = uuid.uuid4().hex[:8]
         deadline = time.monotonic() + self.config.timeout_for(adapter.backend)
         messages: List[Dict] = [{"role": "user", "content": opening}]
+        tools = tools_for(task.agent)
+        token_budget = max(2048, int(task.est_tokens_out * self.TOKEN_BUDGET_FACTOR))
+        sandbox = Sandbox(self.stores.path("code") / f"task_{task.id}" / ".sandbox") \
+            if task.agent in CODE_EXEC_AGENTS else None
         tin = tout = 0
         status_posted = False
 
@@ -123,10 +150,21 @@ class AgentRunner:
             if _estimate_tokens(messages) > self.CONTEXT_LIMIT:
                 messages = self._evict(grant, task, session_id, messages, tin, tout)
 
-            turn: Turn = adapter.run_turn(system, messages, TOOLS,
+            turn: Turn = adapter.run_turn(system, messages, tools,
                                           effort=task.effort, max_tokens=4096)
             tin += turn.tokens_in
             tout += turn.tokens_out
+
+            if tout > token_budget:
+                # §11.2: interrupt on overflow, log it, leave retry/re-route to the Orchestrator
+                self._post_status(grant, task, session_id, {
+                    "status": "blocked: token-budget",
+                    "notes": f"output {tout} tokens exceeded budget {token_budget}",
+                    "tokens_in": tin, "tokens_out": tout})
+                self.bus.emit(EventType.BUDGET,
+                              f"token budget exceeded ({tout} > {token_budget}) — interrupted",
+                              task_id=task.id)
+                return RunResult(tin, tout, safeguard=False)
 
             if turn.safeguard_refusal:
                 # §B.6: record verbatim, block, never re-dispatch the same content
@@ -156,6 +194,9 @@ class AgentRunner:
                         f"task_{task.id}/{tc.args['relpath']}", tc.args["content"],
                         model=f"{task.model}@{task.effort}", session_id=session_id)
                     results.append({"id": tc.id, "result": {"saved": str(path.name)}})
+                elif tc.name == "run_code" and sandbox is not None:
+                    res = sandbox.run_python(tc.args.get("code", ""))
+                    results.append({"id": tc.id, "result": res.summary()})
                 elif tc.name == "post_status":
                     self._post_status(grant, task, session_id, {
                         **tc.args, "tokens_in": tin, "tokens_out": tout})

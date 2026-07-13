@@ -18,6 +18,7 @@ from .config import Config
 from .conflicts import (ConflictCard, ConflictLadder, LadderContext, Option,
                         detect_and_break_cycles)
 from .events import EventBus, EventType
+from .gates import GateEngine, is_gate_block, read_status_payload
 from .memory import MemoryStores
 from .plan import PlanStore, Task, parse_rendered_plan, parse_tasks
 from .router import (AvailabilityMonitor, BudgetLedger, Candidate, Router,
@@ -64,6 +65,7 @@ class Orchestrator:
         self.runner = AgentRunner(self.stores, bus, config)
         self.ceiling = ceiling_usd
         self._checkpoint = checkpoint
+        self.gates = GateEngine(config.parameters, bus)
         self.ladder = ConflictLadder(
             config.parameters, bus,
             context=lambda: LadderContext(budget_pressure=self.ledger.pressure()),
@@ -130,10 +132,10 @@ class Orchestrator:
         plan.status = "in-progress"
 
         while not plan.all_terminal():
-            ready = plan.ready_tasks()
+            ready = [t for t in plan.ready_tasks() if self.gates.can_dispatch(plan, t)]
             if not ready:
                 self.bus.emit(EventType.INFO,
-                              "no dispatchable tasks remain (blocked dependencies) — stopping")
+                              "no dispatchable tasks remain (blocked dependencies or gates) — stopping")
                 break
             for task in ready:
                 self._dispatch(plan, task)
@@ -193,6 +195,11 @@ class Orchestrator:
         plan.record_cost(task.id, cost)
         plan.reserved = sum(self.ledger.reserved.values())
         plan.merge_cache(self.stores.path("cache"), task, self.bus)
+        payload = read_status_payload(self.stores.path("cache"), task)
+        self.gates.on_task_merged(plan, task, payload)
+        if is_gate_block(task.status):
+            # quality outcome, not model failure — never walk the fallback chain
+            return True
         return (task.status == "completed" or result.safeguard
                 or task.status.startswith("blocked: safeguard"))
 

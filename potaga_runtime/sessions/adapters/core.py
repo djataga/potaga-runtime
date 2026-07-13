@@ -86,11 +86,23 @@ class MockAdapter:
                     ToolCall("post_status", {"status": "blocked: quality-gate",
                                              "notes": f"mock scripted failure on {self.backend}"}, id="t1"),
                 ], tokens_in=500, tokens_out=90, stop_reason="tool_use")
+            status_args = {"status": "completed",
+                           "notes": f"mock run on {self.backend} — artifact saved",
+                           "sandbox_verified": True, "coverage": 0.85, "scope_ratio": 1.0}
+            if behavior == "low-coverage":
+                status_args["coverage"] = 0.42
+            elif behavior == "scope-creep":
+                status_args["scope_ratio"] = 1.6
+            elif behavior == "unverified":
+                status_args["sandbox_verified"] = False
+            elif behavior == "reject":
+                status_args["notes"] = "[REJECTED: hardcoded secret in auth module]"
+            elif behavior == "approve":
+                status_args["notes"] = "[APPROVED] contracts verified, semgrep run, scope 1.0x"
             return Turn(tool_calls=[
                 ToolCall("save_output", {"relpath": "artifact.md",
                                          "content": f"# mock artifact\n({self.backend} @ {effort})"}, id="t1"),
-                ToolCall("post_status", {"status": "completed",
-                                         "notes": f"mock run on {self.backend} — artifact saved"}, id="t2"),
+                ToolCall("post_status", status_args, id="t2"),
             ], tokens_in=900, tokens_out=180, stop_reason="tool_use")
         return Turn(text="Done.", tokens_in=200, tokens_out=20)
 
