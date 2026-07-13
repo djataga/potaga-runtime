@@ -1,9 +1,10 @@
 # potaga-runtime
 
-Phase-1 reference implementation of the Potaga orchestration runtime. It consumes the
-[potaga prompt pack](https://github.com/djataga/potaga) (v4.2) and wires the dispatch path
-end-to-end against a single Anthropic backend, per the roadmap: agent loop, planning
-document, task decomposition, basic routing.
+Phase-1 + Phase-3 reference implementation of the Potaga orchestration runtime. It consumes the
+[potaga prompt pack](https://github.com/djataga/potaga) (v4.2) and wires the dispatch path end-to-end.
+Phase 1: agent loop, planning document, task decomposition. Phase 3: multi-model
+routing — the five-stage CQP pipeline, OpenAI-compatible adapters (GPT-5.6 Sol/Terra,
+GLM-5.2), Sol Ultra containment, and full §B.5 fallback-chain escalation.
 
 ## What is implemented (and which policy point it satisfies)
 
@@ -19,10 +20,21 @@ document, task decomposition, basic routing.
 | `orchestrator.py` — architecture gate | 4 (partial) | The mandatory human approval gate after the Architect completes; declining blocks all downstream tasks. Full gate engine arrives in Phase 6. |
 | `config.py` | — | Boot-time validation mirrors the repo's CI invariants — the runtime refuses to start on a config the CI would reject. |
 
-**Deliberately not in Phase 1** (stubs and seams are in place): CQP scoring and multi-backend
-fallback walking (Phase 3), the OpenAI/Zhipu adapters (Phase 3), Claude Memory Stores
-(Phase 4), the conflict ladder and deadlock scan (Phase 5), the full gate engine and code
-sandbox (Phase 6).
+## Phase 3 additions
+
+| Module | Policy / spec | Notes |
+|---|---|---|
+| `router.py` — five-stage pipeline | §B.1, spec §4.4 | classify (agent + UI-content hints) → availability filter → quality threshold (80% of best available, scores from spec §4.1, operator-tunable) → CQP scoring with the `cqp_margin` tie-break → fallback assignment in declared order. |
+| Special rules | spec §4.5 | Security-Critical Path picks the highest-quality qualifying backend regardless of CQP; cost-ceiling preference flips non-critical close races to the cheaper option at ≥80% budget pressure; the security floor still fails loudly when nothing qualifies. |
+| `SolUltraGovernor` | spec §5 | sol-ultra calls serialized (lock) and capped per project (default 6, from `special_rules`); when the cap is exhausted, ultra entries are skipped as if unavailable. The ×3.5 multiplier is priced into every estimate. |
+| `AvailabilityMonitor` | §B.9 | dynamic statuses with `set_status()` as the poller hook; each down-transition swaps routing to GA fallbacks and is announced once per session. |
+| Orchestrator dispatch | §B.5 | try the CQP-chosen primary → one same-tier retry → walk the fallback chain tier by tier with FALLBACK/ESCALATION events → `blocked: chain-exhausted`. Safeguard refusals remain terminal — never walked down the chain. |
+| `OpenAICompatAdapter` | — | one adapter for every OpenAI-compatible endpoint: Sol/Terra directly, GLM-5.2 via `--glm-base-url`. Model IDs, base URLs, and effort→param mappings are runtime config, never hardcoded provider claims. Lights up automatically when `OPENAI_API_KEY` / `ZAI_API_KEY` are present. |
+| Cost tracking | §B.2 | per-backend spend breakdown in the ledger and the CLI summary. |
+
+**Still ahead** (seams in place): Claude Memory Stores backend (Phase 4), the conflict
+ladder and deadlock scan (Phase 5), the full gate engine and code sandbox (Phase 6),
+true parallel dispatch.
 
 ## Quick start
 
@@ -53,11 +65,15 @@ degrades gracefully). Check current model names at https://docs.claude.com.
 POTAGA_REPO=/path/to/potaga python -m pytest tests/ -q
 ```
 
-14 tests, fully offline: config invariants (including rejection of the dead-xhigh config the
+23 tests, fully offline: config invariants (including rejection of the dead-xhigh config the
 v4.2 audit fixed), pricing-epoch switching, multiplier math, degraded-mode routing, the
 security floor, plan parsing and single-writer rendering, store grants and path-escape
 protection, and an end-to-end dry run asserting artifacts, provenance, statuses, and the
-Decision Log.
+Decision Log. Phase 3 adds: frontend_ui classification routing to GLM, the quality
+threshold keeping backend coding on Sonnet despite cheaper GLM, the security path
+never flipping on cost, the ultra cap falling back to the Opus floor, notify-once
+degraded transitions, chain-walk escalation completing on the fallback tier, and
+safeguard refusals never being re-dispatched.
 
 ## Layout
 

@@ -1,12 +1,12 @@
-"""Decomposer + Orchestrator.
+"""Decomposer + Orchestrator — Phase 3.
 
-Decomposer: the ONE place the control plane calls an LLM, using the §A
-prompt from prompts/07_orchestrator.md verbatim, output validated against
-the plan schema.
+Decomposer: unchanged — the ONE LLM call, §A prompt verbatim.
 
-Orchestrator: the deterministic loop — decompose → route → reserve →
-dispatch → merge → gates → deliver. Error recovery per §B.5: one retry on
-the same tier, then walk the fallback chain, all logged.
+Orchestrator dispatch now implements §B.5 in full over the router's
+RoutePlan: try the CQP-chosen primary, retry once on the same tier, then
+walk the fallback chain tier by tier (FALLBACK → ESCALATION events), until
+completed / safeguard-blocked / chain exhausted. Sol Ultra dispatches go
+through the governor (serialized, capped per project).
 """
 from __future__ import annotations
 
@@ -18,7 +18,8 @@ from .config import Config
 from .events import EventBus, EventType
 from .memory import MemoryStores
 from .plan import PlanStore, Task, parse_tasks
-from .router import AvailabilityMonitor, BudgetLedger, Router
+from .router import (AvailabilityMonitor, BudgetLedger, Candidate, Router,
+                     SolUltraGovernor)
 from .sessions.adapters.core import Adapter
 from .sessions.runner import AgentRunner, SessionBuilder
 
@@ -44,19 +45,23 @@ class Decomposer:
 
 
 class Orchestrator:
+    SAME_TIER_RETRIES = 1  # §B.5: retry once same tier, then escalate
+
     def __init__(self, config: Config, workspace: pathlib.Path, adapters: Dict[str, Adapter],
                  bus: EventBus, ceiling_usd: float,
                  confirm: Callable[[str], bool], checkpoint: Callable[[str], bool]) -> None:
         self.config, self.bus = config, bus
         self.stores = MemoryStores(workspace)
         self.adapters = adapters
-        self.monitor = AvailabilityMonitor(config, set(adapters))
-        self.router = Router(config, self.monitor, bus)
+        self.monitor = AvailabilityMonitor(config, set(adapters), bus)
+        self.governor = SolUltraGovernor(config)
         self.ledger = BudgetLedger(config, ceiling_usd, bus, confirm)
+        self.router = Router(config, self.monitor, bus, self.governor,
+                             budget_pressure=self.ledger.pressure)
         self.builder = SessionBuilder(config)
         self.runner = AgentRunner(self.stores, bus, config)
         self.ceiling = ceiling_usd
-        self._checkpoint = checkpoint  # human gate hook
+        self._checkpoint = checkpoint
 
     # ---------- the loop ----------
     def run(self, project: str, request: str) -> PlanStore:
@@ -70,7 +75,7 @@ class Orchestrator:
                 self.bus.emit(EventType.INFO,
                               "no dispatchable tasks remain (blocked dependencies) — stopping")
                 break
-            for task in ready:  # Phase 1: sequential; §B parallelism arrives in Phase 3
+            for task in ready:  # sequential; true parallel dispatch is a later phase
                 self._dispatch(plan, task)
                 if task.agent == "architect" and task.status == "completed":
                     self._human_architecture_gate(plan, task)
@@ -79,35 +84,56 @@ class Orchestrator:
         plan._flush()
         return plan
 
-    # ---------- dispatch with §B.5 error recovery ----------
+    # ---------- §B.5 dispatch: same-tier retry, then walk the chain ----------
     def _dispatch(self, plan: PlanStore, task: Task) -> None:
-        assignment = self.router.route(task)
-        for attempt, (backend, effort) in enumerate(
-                [(assignment.backend, assignment.effort), (assignment.backend, assignment.effort)]):
-            adapter = self.adapters[backend]
-            plan.assign(task.id, backend, effort)
-            self.ledger.reserve(task, backend, effort)
-            plan.reserved = sum(self.ledger.reserved.values())
+        route_plan = self.router.plan(task, self.ledger)
+        for tier_idx, cand in enumerate(route_plan.chain):
+            if tier_idx > 0:
+                self.bus.emit(EventType.ESCALATION,
+                              f"escalating along fallback chain → {cand.backend}@{cand.effort}",
+                              task_id=task.id)
+            for attempt in range(1 + self.SAME_TIER_RETRIES):
+                terminal = self._attempt(plan, task, cand)
+                if terminal:
+                    return
+                if attempt < self.SAME_TIER_RETRIES:
+                    self.bus.emit(EventType.FALLBACK,
+                                  f"retrying once on same tier ({cand.backend}@{cand.effort})",
+                                  task_id=task.id)
+                    task.status = "not-started"
+            task.status = "not-started"  # move to next tier
+        task.status = "blocked: chain-exhausted"
+        self.bus.emit(EventType.ESCALATION,
+                      "fallback chain exhausted — task blocked for human review",
+                      task_id=task.id)
+        plan._flush()
+
+    def _attempt(self, plan: PlanStore, task: Task, cand: Candidate) -> bool:
+        """One dispatch attempt. Returns True when the task is terminal
+        (completed or safeguard-blocked — never re-dispatch refused content)."""
+        adapter = self.adapters[cand.backend]
+        plan.assign(task.id, cand.backend, cand.effort)
+        self.ledger.reserve(task, cand.backend, cand.effort)
+        plan.reserved = sum(self.ledger.reserved.values())
+
+        is_ultra = cand.backend == "gpt-5.6-sol" and cand.effort == "ultra"
+        gov = self.governor.acquire() if is_ultra else None
+        try:
             result = self.runner.run(task, adapter,
                                      self.builder.system_prompt(task),
                                      self.builder.opening_message(task))
-            cost = self.ledger.settle(task, backend, result.tokens_in, result.tokens_out)
-            plan.record_cost(task.id, cost)
-            plan.reserved = sum(self.ledger.reserved.values())
-            plan.merge_cache(self.stores.path("cache"), task, self.bus)
+        finally:
+            if gov:
+                gov.release()
 
-            if task.status == "completed" or result.safeguard or task.status.startswith("blocked: safeguard"):
-                return  # done, or §B.6: never re-dispatch refused content
-            if attempt == 0:
-                self.bus.emit(EventType.FALLBACK,
-                              f"retrying once on same tier ({backend}@{effort})", task_id=task.id)
-                task.status = "not-started"
-        # both attempts failed on the primary tier — Phase 3 walks the fallback chain here
-        self.bus.emit(EventType.ESCALATION,
-                      "retry exhausted on primary tier; leaving blocked for escalation",
-                      task_id=task.id)
+        cost = self.ledger.settle(task, cand.backend, result.tokens_in, result.tokens_out)
+        plan.record_cost(task.id, cost)
+        plan.reserved = sum(self.ledger.reserved.values())
+        plan.merge_cache(self.stores.path("cache"), task, self.bus)
+        return (task.status == "completed" or result.safeguard
+                or task.status.startswith("blocked: safeguard"))
 
-    # ---------- gates (Phase-1: the mandatory human architecture gate) ----------
+    # ---------- gates (Phase-1 human architecture gate, unchanged) ----------
     def _human_architecture_gate(self, plan: PlanStore, task: Task) -> None:
         self.bus.emit(EventType.HUMAN_REQUIRED, "Architecture approval", task_id=task.id)
         if self._checkpoint("Architecture ready (see potaga-shared). Approve to continue?"):

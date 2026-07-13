@@ -33,6 +33,11 @@ def main(argv: list[str] | None = None) -> int:
                      help="pass effort as an API parameter (only if your deployment supports it); "
                           "otherwise effort is folded into the system prompt")
     run.add_argument("--yes", action="store_true", help="auto-approve human checkpoints (CI use)")
+    run.add_argument("--sol-model", default="gpt-5.6-sol", help="OpenAI model string for Sol")
+    run.add_argument("--terra-model", default="gpt-5.6-terra", help="OpenAI model string for Terra")
+    run.add_argument("--glm-model", default="glm-5.2", help="GLM model string")
+    run.add_argument("--glm-base-url", default=None,
+                     help="OpenAI-compatible base URL for the GLM provider")
     args = ap.parse_args(argv)
 
     config = Config.load(args.prompts, runtime_overrides={
@@ -44,9 +49,22 @@ def main(argv: list[str] | None = None) -> int:
     bus.subscribe(lambda ev: print(f"  {ev.render()}"))
 
     if args.dry_run:
-        adapters = {"sonnet-5": MockAdapter()}
+        # every GA backend mocked, so multi-model CQP routing runs offline
+        adapters = {b: MockAdapter(backend=b)
+                    for b, c in config.matrix["backends"].items() if c.get("ga")}
     else:
         adapters = {"sonnet-5": AnthropicAdapter(args.model_id, args.effort_param)}
+        # optional backends light up when their credentials are present
+        import os
+        from .sessions.adapters.core import OpenAICompatAdapter
+        if os.environ.get("OPENAI_API_KEY"):
+            adapters["gpt-5.6-sol"] = OpenAICompatAdapter(
+                "gpt-5.6-sol", args.sol_model, "OPENAI_API_KEY")
+            adapters["gpt-5.6-terra"] = OpenAICompatAdapter(
+                "gpt-5.6-terra", args.terra_model, "OPENAI_API_KEY")
+        if os.environ.get("ZAI_API_KEY"):
+            adapters["glm-5.2"] = OpenAICompatAdapter(
+                "glm-5.2", args.glm_model, "ZAI_API_KEY", base_url=args.glm_base_url)
 
     def ask(prompt: str) -> bool:
         if args.yes:
@@ -62,6 +80,9 @@ def main(argv: list[str] | None = None) -> int:
     plan = orch.run(args.project, args.request)
 
     print(f"\nStatus: {plan.status}  ·  spent ${plan.spent:.2f} of ${plan.ceiling:.2f}")
+    by_backend = orch.ledger.spent_by_backend
+    if by_backend:
+        print("  spend by backend: " + " · ".join(f"{b} ${c:.2f}" for b, c in sorted(by_backend.items())))
     for t in plan.tasks.values():
         print(f"  Task {t.id} [{t.agent}] {t.status}  (${t.cost_usd:.2f})")
     print(f"\nPlan: {plan.path}")

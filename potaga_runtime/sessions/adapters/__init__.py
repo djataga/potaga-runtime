@@ -1,1 +1,2 @@
-from .core import Adapter, AnthropicAdapter, MockAdapter, ToolCall, Turn  # noqa: F401
+from .core import (Adapter, AnthropicAdapter, MockAdapter, OpenAICompatAdapter,  # noqa: F401
+                   ToolCall, Turn)

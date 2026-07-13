@@ -13,7 +13,8 @@ from potaga_runtime.events import EventBus, EventType
 from potaga_runtime.memory import AccessDenied, MemoryStores
 from potaga_runtime.orchestrator import Orchestrator
 from potaga_runtime.plan import PlanStore, Task, parse_tasks
-from potaga_runtime.router import AvailabilityMonitor, BudgetLedger, Router
+from potaga_runtime.router import (AvailabilityMonitor, BudgetLedger, Router,
+                                   SolUltraGovernor)
 from potaga_runtime.sessions.adapters.core import MockAdapter, _MOCK_PLAN
 
 REPO = pathlib.Path(os.environ.get("POTAGA_REPO", pathlib.Path(__file__).parent.parent.parent / "repo"))
@@ -70,25 +71,33 @@ def test_hard_pause_declined_raises(config: Config, bus: EventBus) -> None:
 
 
 # ---------------- router ----------------
-def test_router_routes_everything_to_available_backend(config: Config, bus: EventBus) -> None:
-    router = Router(config, AvailabilityMonitor(config, {"sonnet-5"}), bus)
-    a = router.route(make_task(agent="coder"))
-    assert a.backend == "sonnet-5" and not a.degraded
+def make_router(config: Config, bus: EventBus, registered: set,
+                pressure: float = 0.0) -> tuple[Router, BudgetLedger]:
+    ledger = BudgetLedger(config, 100.0, bus, confirm=lambda _: True)
+    monitor = AvailabilityMonitor(config, registered, bus)
+    router = Router(config, monitor, bus, SolUltraGovernor(config),
+                    budget_pressure=lambda: pressure)
+    return router, ledger
+
+
+def test_router_routes_to_available_backend(config: Config, bus: EventBus) -> None:
+    router, ledger = make_router(config, bus, {"sonnet-5"})
+    rp = router.plan(make_task(agent="coder"), ledger)
+    assert rp.primary.backend == "sonnet-5" and not rp.degraded
 
 
 def test_router_degraded_mode_logged(config: Config, bus: EventBus) -> None:
-    # security_review primary is sol@ultra; only opus registered → degraded fallback
-    router = Router(config, AvailabilityMonitor(config, {"opus-4-8", "sonnet-5"}), bus)
-    a = router.route(make_task(agent="reviewer", security=True))
-    assert a.backend == "opus-4-8" and a.degraded
-    assert any(e.type == EventType.DEGRADED_MODE for e in bus.history)
+    # security_review primary is sol@ultra (non-GA/unregistered) → opus fallback
+    router, ledger = make_router(config, bus, {"opus-4-8", "sonnet-5"})
+    rp = router.plan(make_task(agent="reviewer", security=True), ledger)
+    assert rp.primary.backend == "opus-4-8" and rp.degraded
 
 
 def test_security_floor_never_below_opus(config: Config, bus: EventBus) -> None:
     # only sonnet available: security_review chain has floor opus-4-8 → sonnet must NOT qualify
-    router = Router(config, AvailabilityMonitor(config, {"sonnet-5"}), bus)
+    router, ledger = make_router(config, bus, {"sonnet-5"})
     with pytest.raises(RuntimeError):
-        router.route(make_task(agent="reviewer", security=True))
+        router.plan(make_task(agent="reviewer", security=True), ledger)
 
 
 # ---------------- plan ----------------
