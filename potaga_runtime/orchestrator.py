@@ -15,6 +15,8 @@ import re
 from typing import Callable, Dict, List
 
 from .config import Config
+from .conflicts import (ConflictCard, ConflictLadder, LadderContext, Option,
+                        detect_and_break_cycles)
 from .events import EventBus, EventType
 from .memory import MemoryStores
 from .plan import PlanStore, Task, parse_rendered_plan, parse_tasks
@@ -62,12 +64,28 @@ class Orchestrator:
         self.runner = AgentRunner(self.stores, bus, config)
         self.ceiling = ceiling_usd
         self._checkpoint = checkpoint
+        self.ladder = ConflictLadder(
+            config.parameters, bus,
+            context=lambda: LadderContext(budget_pressure=self.ledger.pressure()),
+            human=self._human_pick_option)
 
     # ---------- the loop ----------
     def run(self, project: str, request: str) -> PlanStore:
         plan = PlanStore(self.stores.path("shared"), project, request, self.ceiling, self.bus)
         decomposer = Decomposer(self.config, self.adapters["sonnet-5"], self.bus)
-        plan.set_tasks(decomposer.decompose(request))
+        tasks = decomposer.decompose(request)
+        broken = detect_and_break_cycles(tasks, self.bus)
+        plan.set_tasks(tasks)
+        for dep, tid in broken:
+            card = self.ladder.new_card(
+                type=__import__("potaga_runtime.conflicts", fromlist=["ConflictType"]).ConflictType.PRIORITY,
+                raised_by="orchestrator", against="orchestrator",
+                summary=f"dependency cycle involving {dep}→{tid} auto-broken "
+                        "(lowest-priority edge marked optional)",
+                options=[Option(label=f"proceed without hard dependency {dep}→{tid}",
+                                proposed_by="orchestrator")],
+                task_id=tid, status="resolved-local", level_reached="L1")
+            plan.record_conflict(card.render())
 
         while not plan.all_terminal():
             ready = plan.ready_tasks()
@@ -177,6 +195,19 @@ class Orchestrator:
         plan.merge_cache(self.stores.path("cache"), task, self.bus)
         return (task.status == "completed" or result.safeguard
                 or task.status.startswith("blocked: safeguard"))
+
+    # ---------- conflict resolution surface ----------
+    def resolve_conflict(self, plan: PlanStore, card: ConflictCard) -> ConflictCard:
+        """Run a card up the ladder and persist it into the plan's Conflict Log."""
+        resolved = self.ladder.resolve(card)
+        plan.record_conflict(resolved.render())
+        return resolved
+
+    def _human_pick_option(self, card: ConflictCard):
+        labels = " | ".join(f"[{i+1}] {o.label}" for i, o in enumerate(card.options))
+        ok = self._checkpoint(f"Conflict #{card.id:03d}: {card.summary} — approve option 1? "
+                              f"({labels})")
+        return card.options[0] if ok else (card.options[1] if len(card.options) > 1 else None)
 
     # ---------- gates (Phase-1 human architecture gate, unchanged) ----------
     def _human_architecture_gate(self, plan: PlanStore, task: Task) -> None:

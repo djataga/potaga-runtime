@@ -1,6 +1,6 @@
 # potaga-runtime
 
-Phase 1 + 3 + 4 reference implementation of the Potaga orchestration runtime. It consumes the
+Phase 1 + 3 + 4 + 5 reference implementation of the Potaga orchestration runtime. It consumes the
 [potaga prompt pack](https://github.com/djataga/potaga) (v4.2) and wires the dispatch path end-to-end.
 Phase 1: agent loop, planning document, task decomposition. Phase 3: multi-model
 routing — the five-stage CQP pipeline, OpenAI-compatible adapters (GPT-5.6 Sol/Terra,
@@ -43,8 +43,19 @@ GLM-5.2), Sol Ultra containment, and full §B.5 fallback-chain escalation.
 | Context eviction + recovery | spec §9.6, preamble | the runner saves working state to the agent's cache partition FIRST, then compacts history (opening + last two exchanges kept, intermediate tool traffic evicted). A later session for the same subtask gets the scratch injected under a RECOVERY PROTOCOL header. |
 | Cross-session resume | roadmap Phase 4 | `Orchestrator.resume()` / `potaga resume` parses the persisted plan back (statuses, models, spend), resets dead `in_progress` tasks, optionally retries non-safeguard blocks (`--retry-blocked`) — safeguard blocks are never auto-retried across sessions (§B.6). |
 
-**Still ahead** (seams in place): the conflict ladder and deadlock scan (Phase 5), the
-full gate engine and code sandbox (Phase 6), true parallel dispatch.
+## Phase 5 additions — Conflict Resolution
+
+| Module | Protocol / policy | Notes |
+|---|---|---|
+| `conflicts.py` — cards + scoring | Escalation Protocols §2 | conflict cards with per-agent independent scores averaged into the shared formula `org − risk − reversibility + evidence`; hard constraints tracked per option; rendered per the CONFLICT_CARD template into the plan's Conflict Log. |
+| L0 local resolution | §3 | accept only when the top option beats the runner-up by ≥ `local_acceptance_margin` (15%) with no hard-constraint violation; security-relevant cards auto-escalate past L0 regardless of margin. |
+| L1 tie-breaks | §5, policy §B.7 | the exact order: Security Override (more secure wins regardless of score) > Cost Ceiling Override (≥80% pressure → cheapest) > Deadline Override (fastest on a blocked critical path) > Reversibility/Evidence Preference (reversible → keep options open; irreversible → strongest evidence) > Reviewer Authority (binding arbiter for Coder↔Tester quality disputes, rotation-aware). |
+| L2 / L3 hooks | §4 | judgment enters only via injected callables — an Architect hook (may be LLM-backed) and the human hook, which emits `[HUMAN REQUIRED]` and pauses. Without a human hook the ladder terminates on the safest option, so termination in ≤4 hops is guaranteed. |
+| Dependency cycles | §7.1, policy §B.8 | topological detection after decomposition; each cycle broken at its lowest-priority edge (never a security task's dependency), marked optional, logged as an auto-resolved conflict card. |
+| Waiting-cycle scan | §7.2–7.4 | `scan_waiting_cycles()` — the 60-second scan's core: detects agent wait cycles and names the lowest-priority victim for preemption (state save to its cache partition is the caller's job). Ready for parallel dispatch. |
+
+**Still ahead** (seams in place): the full gate engine and code sandbox (Phase 6),
+true parallel dispatch.
 
 ## Quick start
 
@@ -75,7 +86,7 @@ degrades gracefully). Check current model names at https://docs.claude.com.
 POTAGA_REPO=/path/to/potaga python -m pytest tests/ -q
 ```
 
-33 tests, fully offline: config invariants (including rejection of the dead-xhigh config the
+46 tests, fully offline: config invariants (including rejection of the dead-xhigh config the
 v4.2 audit fixed), pricing-epoch switching, multiplier math, degraded-mode routing, the
 security floor, plan parsing and single-writer rendering, store grants and path-escape
 protection, and an end-to-end dry run asserting artifacts, provenance, statuses, and the
@@ -87,7 +98,12 @@ safeguard refusals never being re-dispatched. Phase 4 adds: precondition rejecti
 OCC retry-through-interference and exhaustion, version-history provenance, per-agent
 attachment rendering, eviction saving scratch before compaction, recovery injection,
 an interrupted-project resume completing end-to-end, safeguard blocks surviving
---retry-blocked, and a rendered-plan parse round-trip.
+--retry-blocked, and a rendered-plan parse round-trip. Phase 5 adds: L0 margin
+acceptance and sub-margin escalation, the spec's Conflict #001 scenario (huge margin
+overridden by a security hard constraint), every L1 tie-break in order, binding
+arbiter decisions, L2/L3 hooks with the [HUMAN REQUIRED] event, cycle breaking that
+spares security tasks, wait-cycle victim selection, and resolved cards rendered into
+the plan.
 
 ## Layout
 

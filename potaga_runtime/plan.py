@@ -62,6 +62,7 @@ class PlanStore:
         self.status = "planning"
         self.tasks: Dict[str, Task] = {}
         self.decision_log: List[str] = []
+        self.conflict_cards: List[str] = []  # rendered ConflictCard blocks
         self.spent = 0.0
         self.reserved = 0.0
         bus.subscribe(self._on_event)
@@ -100,6 +101,10 @@ class PlanStore:
         if not (task.status in STATUSES or task.status.startswith("blocked")):
             task.status = f"blocked: invalid-status ({task.status[:40]})"
         bus.emit(EventType.TASK_STATUS, f"{task.agent} → {task.status}", task_id=task.id)
+
+    def record_conflict(self, rendered_card: str) -> None:
+        self.conflict_cards.append(rendered_card)
+        self._flush()
 
     def record_cost(self, task_id: str, cost: float) -> None:
         self.tasks[task_id].cost_usd += cost
@@ -144,6 +149,8 @@ class PlanStore:
             ]
         lines += ["## Decision Log"] + [f"- {l}" for l in self.decision_log]
         lines += ["", "## Architecture Decisions", "", "## Conflict Log", ""]
+        for card in self.conflict_cards:
+            lines += [card, ""]
         self.path.write_text("\n".join(lines))
 
 
