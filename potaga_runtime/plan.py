@@ -147,6 +147,38 @@ class PlanStore:
         self.path.write_text("\n".join(lines))
 
 
+# ---------- rendered-plan parsing (cross-session resume) ----------
+_META_RE = re.compile(r"^## (Project|Goal|Status): (.*)$")
+_BUDGET_RE = re.compile(r"ceiling \$([\d.]+) · spent \$([\d.]+)")
+
+
+def parse_rendered_plan(markdown: str) -> dict:
+    """Parse a plan previously rendered by PlanStore back into metadata and
+    Tasks (including runtime fields: status, model/effort, cost)."""
+    meta: dict = {}
+    for line in markdown.splitlines():
+        m = _META_RE.match(line.strip())
+        if m:
+            meta[m.group(1).lower()] = m.group(2)
+        b = _BUDGET_RE.search(line)
+        if b:
+            meta["ceiling"], meta["spent"] = float(b.group(1)), float(b.group(2))
+    tasks = parse_tasks(markdown)
+    # re-attach runtime fields the schema parser ignores
+    blocks = re.split(r"^### Task ", markdown, flags=re.M)[1:]
+    for t, block in zip(tasks, blocks):
+        sm = re.search(r"^- Status: (.+)$", block, re.M)
+        mm = re.search(r"^- Model/effort: (.+)$", block, re.M)
+        cm = re.search(r"^- Cost: \$([\d.]+)$", block, re.M)
+        if sm:
+            t.status = sm.group(1).strip()
+        if mm and "@" in mm.group(1):
+            t.model, _, t.effort = mm.group(1).strip().partition("@")
+        if cm:
+            t.cost_usd = float(cm.group(1))
+    return {"meta": meta, "tasks": tasks}
+
+
 # ---------- decomposition parsing ----------
 _TASK_RE = re.compile(r"^### Task ([\w.-]+): (.+)$")
 _FIELD_RE = re.compile(r"^- ([A-Za-z ()/]+): (.*)$")

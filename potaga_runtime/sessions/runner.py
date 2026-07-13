@@ -58,7 +58,17 @@ class SessionBuilder:
         return f"{self._preamble}\n\n{self._roles[task.agent]}"
 
     @staticmethod
-    def opening_message(task: Task) -> str:
+    def opening_message(task: Task, attachments: list | None = None,
+                        recovery: str | None = None) -> str:
+        mounts = ""
+        if attachments:
+            mounts = "\n\nMounted memory stores (fixed at session creation):\n" + "\n".join(
+                f"- {a['store']} [{a['access']}] — {a['instructions']}" for a in attachments)
+        rec = ""
+        if recovery:
+            rec = ("\n\nRECOVERY PROTOCOL: a previous session for this subtask saved state "
+                   "before its context was reset. Read it, read the plan, read the relevant "
+                   f"stores, then resume — do not restart from scratch.\nSaved state:\n{recovery}")
         return (
             f"## Subtask {task.id}: {task.description}\n"
             f"- Input contract: {task.input_contract}\n"
@@ -70,7 +80,7 @@ class SessionBuilder:
             "and post_status (writes to your cache partition; the Orchestrator merges it "
             "into the plan). Complete the subtask, save your deliverable, then post exactly "
             "one final status."
-        )
+        ) + mounts + rec
 
 
 @dataclass
@@ -80,11 +90,20 @@ class RunResult:
     safeguard: bool
 
 
+def _estimate_tokens(messages: List[Dict]) -> int:
+    return sum(len(json.dumps(m)) for m in messages) // 4
+
+
 class AgentRunner:
     MAX_TURNS = 8
+    # context-eviction threshold (logical tokens); operator-tunable
+    CONTEXT_LIMIT = 24000
 
-    def __init__(self, stores: MemoryStores, bus: EventBus, config: Config) -> None:
+    def __init__(self, stores: MemoryStores, bus: EventBus, config: Config,
+                 context_limit: int | None = None) -> None:
         self.stores, self.bus, self.config = stores, bus, config
+        if context_limit:
+            self.CONTEXT_LIMIT = context_limit
 
     def run(self, task: Task, adapter: Adapter, system: str, opening: str) -> RunResult:
         grant: StoreGrant = self.stores.grant(task.agent)
@@ -100,6 +119,9 @@ class AgentRunner:
                                   {"status": "blocked: timeout", "notes": "runner deadline hit"})
                 self.bus.emit(EventType.TASK_STATUS, "timeout — preempted", task_id=task.id)
                 return RunResult(tin, tout, safeguard=False)
+
+            if _estimate_tokens(messages) > self.CONTEXT_LIMIT:
+                messages = self._evict(grant, task, session_id, messages, tin, tout)
 
             turn: Turn = adapter.run_turn(system, messages, TOOLS,
                                           effort=task.effort, max_tokens=4096)
@@ -155,6 +177,35 @@ class AgentRunner:
                 "notes": "agent ended without post_status",
                 "tokens_in": tin, "tokens_out": tout})
         return RunResult(tin, tout, safeguard=False)
+
+    def _evict(self, grant: StoreGrant, task: Task, session_id: str,
+               messages: List[Dict], tin: int, tout: int) -> List[Dict]:
+        """Context eviction (spec §9.6): save working state to the cache
+        partition FIRST, then compact — keep the opening message and the two
+        most recent exchanges; evict intermediate tool traffic."""
+        scratch = {
+            "task_id": task.id, "turns_so_far": len(messages),
+            "tokens": {"in": tin, "out": tout},
+            "note": "context compacted; intermediate tool outputs evicted "
+                    "(architectural decisions and deliverables live in the stores)",
+        }
+        self.stores.write(grant, "cache", f"scratch_{task.id}.json",
+                          json.dumps(scratch, indent=2),
+                          model=f"{task.model}@{task.effort}", session_id=session_id)
+        self.bus.emit(EventType.INFO,
+                      "context limit approached — scratch saved, history compacted",
+                      task_id=task.id)
+        compacted = [messages[0]]
+        compacted.append({"role": "user", "content":
+                          "[runtime notice] Earlier turns were evicted to stay within the "
+                          "context limit. Your working state is saved in your cache "
+                          "partition; deliverables already saved to stores are safe."})
+        compacted.extend(messages[-2:])
+        return compacted
+
+    def load_scratch(self, task: Task) -> str | None:
+        rel = f"cache/{task.agent}/scratch_{task.id}.json"
+        return self.stores.read("cache", rel) if self.stores.exists("cache", rel) else None
 
     def _post_status(self, grant: StoreGrant, task: Task, session_id: str, payload: Dict) -> None:
         payload.setdefault("tokens_in", 0)

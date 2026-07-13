@@ -17,7 +17,7 @@ from typing import Callable, Dict, List
 from .config import Config
 from .events import EventBus, EventType
 from .memory import MemoryStores
-from .plan import PlanStore, Task, parse_tasks
+from .plan import PlanStore, Task, parse_rendered_plan, parse_tasks
 from .router import (AvailabilityMonitor, BudgetLedger, Candidate, Router,
                      SolUltraGovernor)
 from .sessions.adapters.core import Adapter
@@ -84,6 +84,47 @@ class Orchestrator:
         plan._flush()
         return plan
 
+    # ---------- cross-session resume (spec §9.6 recovery / roadmap Phase 4) ----------
+    def resume(self, retry_blocked: bool = False) -> PlanStore:
+        """Load an existing MULTI_AGENT_PLAN.md from the workspace and continue.
+
+        completed stays completed; in_progress from a dead session resets to
+        not-started (the runner's recovery scratch, if any, is injected into
+        the new session); blocked resets only with retry_blocked=True."""
+        plan_file = self.stores.path("shared") / "MULTI_AGENT_PLAN.md"
+        if not plan_file.exists():
+            raise FileNotFoundError(f"nothing to resume: {plan_file} does not exist")
+        parsed = parse_rendered_plan(plan_file.read_text())
+        meta = parsed["meta"]
+        self.bus.emit(EventType.INFO,
+                      f"resuming project '{meta.get('project')}' from persisted plan")
+        plan = PlanStore(self.stores.path("shared"), meta.get("project", "resumed"),
+                         meta.get("goal", ""), self.ceiling, self.bus)
+        plan.spent = float(meta.get("spent", 0.0))
+        self.ledger.spent = plan.spent
+        for t in parsed["tasks"]:
+            if t.status == "in_progress":
+                t.status = "not-started"
+            elif t.blocked and retry_blocked and not t.status.startswith("blocked: safeguard"):
+                t.status = "not-started"  # safeguard blocks are never auto-retried (§B.6)
+        plan.set_tasks(parsed["tasks"])
+        # preserve pre-existing runtime fields set_tasks() marked in-progress
+        plan.status = "in-progress"
+
+        while not plan.all_terminal():
+            ready = plan.ready_tasks()
+            if not ready:
+                self.bus.emit(EventType.INFO,
+                              "no dispatchable tasks remain (blocked dependencies) — stopping")
+                break
+            for task in ready:
+                self._dispatch(plan, task)
+                if task.agent == "architect" and task.status == "completed":
+                    self._human_architecture_gate(plan, task)
+        plan.status = "complete" if all(t.status == "completed" for t in plan.tasks.values()) else "review"
+        plan._flush()
+        return plan
+
     # ---------- §B.5 dispatch: same-tier retry, then walk the chain ----------
     def _dispatch(self, plan: PlanStore, task: Task) -> None:
         route_plan = self.router.plan(task, self.ledger)
@@ -119,9 +160,13 @@ class Orchestrator:
         is_ultra = cand.backend == "gpt-5.6-sol" and cand.effort == "ultra"
         gov = self.governor.acquire() if is_ultra else None
         try:
-            result = self.runner.run(task, adapter,
-                                     self.builder.system_prompt(task),
-                                     self.builder.opening_message(task))
+            result = self.runner.run(
+                task, adapter,
+                self.builder.system_prompt(task),
+                self.builder.opening_message(
+                    task,
+                    attachments=self.stores.attachments(task.agent),
+                    recovery=self.runner.load_scratch(task)))
         finally:
             if gov:
                 gov.release()

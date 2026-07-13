@@ -19,6 +19,21 @@ from .sessions.adapters.core import AnthropicAdapter, MockAdapter
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="potaga", description="Potaga runtime — Phase 1")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    res = sub.add_parser("resume", help="resume a persisted project from its workspace")
+    res.add_argument("--prompts", required=True)
+    res.add_argument("--workspace", default="./workspace")
+    res.add_argument("--ceiling", type=float, default=25.0)
+    res.add_argument("--dry-run", action="store_true")
+    res.add_argument("--retry-blocked", action="store_true",
+                     help="reset non-safeguard blocked tasks to not-started")
+    res.add_argument("--model-id", default="claude-sonnet-5")
+    res.add_argument("--effort-param", action="store_true")
+    res.add_argument("--yes", action="store_true")
+    res.add_argument("--sol-model", default="gpt-5.6-sol")
+    res.add_argument("--terra-model", default="gpt-5.6-terra")
+    res.add_argument("--glm-model", default="glm-5.2")
+    res.add_argument("--glm-base-url", default=None)
+
     run = sub.add_parser("run", help="run a project end-to-end")
     run.add_argument("request", help="the software request, verbatim")
     run.add_argument("--prompts", required=True, help="path to the potaga prompt-pack repo")
@@ -74,10 +89,14 @@ def main(argv: list[str] | None = None) -> int:
 
     orch = Orchestrator(config, pathlib.Path(args.workspace), adapters, bus,
                         ceiling_usd=args.ceiling, confirm=ask, checkpoint=ask)
-    print(f"\nPotaga runtime — project '{args.project}'")
+    print(f"\nPotaga runtime — {args.cmd}"
+          + (f" — project '{args.project}'" if args.cmd == "run" else ""))
     print(f"  prompt pack: {config.repo}  ·  ceiling ${args.ceiling:.2f}"
           f"  ·  adapter: {'mock (dry-run)' if args.dry_run else args.model_id}\n")
-    plan = orch.run(args.project, args.request)
+    if args.cmd == "resume":
+        plan = orch.resume(retry_blocked=args.retry_blocked)
+    else:
+        plan = orch.run(args.project, args.request)
 
     print(f"\nStatus: {plan.status}  ·  spent ${plan.spent:.2f} of ${plan.ceiling:.2f}")
     by_backend = orch.ledger.spent_by_backend

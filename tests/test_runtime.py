@@ -125,7 +125,8 @@ def test_store_grants_enforced(tmp_path) -> None:
         stores.write(stores.grant("coder"), "reviews", "x.md", "nope", model="m", session_id="s")
     p = stores.write(stores.grant("coder"), "code", "x.md", "ok", model="m", session_id="s")
     assert p.read_text() == "ok"
-    assert p.with_suffix(".md.prov.json").exists()
+    hist = stores.history("code", "x.md")
+    assert hist and hist[0]["writer"] == "coder" and "sha256" in hist[0]
 
 
 def test_store_path_escape_blocked(tmp_path) -> None:
@@ -146,4 +147,5 @@ def test_dispatch_path_end_to_end(tmp_path, config: Config, bus: EventBus) -> No
     assert "## Decision Log" in text and "routing" in text
     # artifacts landed in the right stores with provenance
     assert list((tmp_path / "potaga-code").rglob("artifact.md"))
+    assert list((tmp_path / "potaga-code" / ".versions").rglob("*.meta.json"))
     assert list((tmp_path / "potaga-cache").rglob("status_*.json"))

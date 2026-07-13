@@ -1,6 +1,6 @@
 # potaga-runtime
 
-Phase-1 + Phase-3 reference implementation of the Potaga orchestration runtime. It consumes the
+Phase 1 + 3 + 4 reference implementation of the Potaga orchestration runtime. It consumes the
 [potaga prompt pack](https://github.com/djataga/potaga) (v4.2) and wires the dispatch path end-to-end.
 Phase 1: agent loop, planning document, task decomposition. Phase 3: multi-model
 routing — the five-stage CQP pipeline, OpenAI-compatible adapters (GPT-5.6 Sol/Terra,
@@ -32,9 +32,19 @@ GLM-5.2), Sol Ultra containment, and full §B.5 fallback-chain escalation.
 | `OpenAICompatAdapter` | — | one adapter for every OpenAI-compatible endpoint: Sol/Terra directly, GLM-5.2 via `--glm-base-url`. Model IDs, base URLs, and effort→param mappings are runtime config, never hardcoded provider claims. Lights up automatically when `OPENAI_API_KEY` / `ZAI_API_KEY` are present. |
 | Cost tracking | §B.2 | per-backend spend breakdown in the ledger and the CLI summary. |
 
-**Still ahead** (seams in place): Claude Memory Stores backend (Phase 4), the conflict
-ladder and deadlock scan (Phase 5), the full gate engine and code sandbox (Phase 6),
-true parallel dispatch.
+## Phase 4 additions — Memory & Persistence
+
+| Module | Spec / policy | Notes |
+|---|---|---|
+| `memory.py` — `MemoryBackend` protocol | spec §9 | `FilesystemBackend` (default, GA) and `ClaudeMemoryStoresBackend`, a thin mapping onto the resources[]/hash-precondition shape of spec §9.3 with the concrete client injected by the operator — no hardcoded claims about any beta API's availability; verify at docs.claude.com before wiring it. |
+| Optimistic concurrency | §B.3, spec §9.4 | `occ_update()` — read-modify-write with SHA-256 preconditions, ≤5 retries, then `OCCExhausted` for Orchestrator escalation. Stale-hash writes raise `PreconditionFailed`; interleaved writers lose nothing. |
+| Immutable versions + provenance | spec §9.5 | every write lands a version copy + metadata (writer, model, session, sha256, ts) under `<store>/.versions/` — the full audit trail, queryable via `history()`. |
+| Session attachment | spec §9.3 | `attachments(agent)` renders the agent's mounts (store, access, instructions) in the resources[] shape; the session opening now states exactly what is mounted with which access. |
+| Context eviction + recovery | spec §9.6, preamble | the runner saves working state to the agent's cache partition FIRST, then compacts history (opening + last two exchanges kept, intermediate tool traffic evicted). A later session for the same subtask gets the scratch injected under a RECOVERY PROTOCOL header. |
+| Cross-session resume | roadmap Phase 4 | `Orchestrator.resume()` / `potaga resume` parses the persisted plan back (statuses, models, spend), resets dead `in_progress` tasks, optionally retries non-safeguard blocks (`--retry-blocked`) — safeguard blocks are never auto-retried across sessions (§B.6). |
+
+**Still ahead** (seams in place): the conflict ladder and deadlock scan (Phase 5), the
+full gate engine and code sandbox (Phase 6), true parallel dispatch.
 
 ## Quick start
 
@@ -65,7 +75,7 @@ degrades gracefully). Check current model names at https://docs.claude.com.
 POTAGA_REPO=/path/to/potaga python -m pytest tests/ -q
 ```
 
-23 tests, fully offline: config invariants (including rejection of the dead-xhigh config the
+33 tests, fully offline: config invariants (including rejection of the dead-xhigh config the
 v4.2 audit fixed), pricing-epoch switching, multiplier math, degraded-mode routing, the
 security floor, plan parsing and single-writer rendering, store grants and path-escape
 protection, and an end-to-end dry run asserting artifacts, provenance, statuses, and the
@@ -73,7 +83,11 @@ Decision Log. Phase 3 adds: frontend_ui classification routing to GLM, the quali
 threshold keeping backend coding on Sonnet despite cheaper GLM, the security path
 never flipping on cost, the ultra cap falling back to the Opus floor, notify-once
 degraded transitions, chain-walk escalation completing on the fallback tier, and
-safeguard refusals never being re-dispatched.
+safeguard refusals never being re-dispatched. Phase 4 adds: precondition rejection,
+OCC retry-through-interference and exhaustion, version-history provenance, per-agent
+attachment rendering, eviction saving scratch before compaction, recovery injection,
+an interrupted-project resume completing end-to-end, safeguard blocks surviving
+--retry-blocked, and a rendered-plan parse round-trip.
 
 ## Layout
 
