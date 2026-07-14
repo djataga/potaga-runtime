@@ -1,0 +1,62 @@
+<section class="screen" id="scr-budget">
+  <div class="shead">
+    <h1>Budget &amp; Cost</h1>
+    <p>Costs are reserved at dispatch — effective tokens = logical × loop multiplier × Ultra multiplier × tokenizer factor — so the ceiling can't be discovered after the fact.</p>
+  </div>
+
+  <div class="grid g2" style="margin-bottom:16px">
+    <div class="card" data-spec>
+      <span class="spectag" data-specid="SPEC-11">SPEC-11</span>
+      <div class="chead"><h3>Pricing epoch</h3><span class="sub mono">config/parameters.yaml</span></div>
+      <div class="cbody">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <span class="pill" style="background:#EAEEFB;color:var(--sonnet)"><span class="dot" style="background:var(--sonnet)"></span>intro epoch active</span>
+          <span style="font-size:12.5px;color:var(--muted)">auto-switch on <b class="mono">2026-09-01</b> · 51 days</span>
+        </div>
+        <table>
+          <thead><tr><th>Model</th><th class="num">In /1M</th><th class="num">Out /1M</th><th class="num">Cached</th></tr></thead>
+          <tbody>
+            <tr><td><span class="chip m-sonnet">sonnet-5</span> <small style="color:var(--muted)">intro → standard</small></td><td class="num">$2.00 → $3.00</td><td class="num">$10.00 → $15.00</td><td class="num">$0.30 → $0.45</td></tr>
+            <tr><td><span class="chip m-opus">opus-4.8</span></td><td class="num">$5.00</td><td class="num">$25.00</td><td class="num">—</td></tr>
+            <tr><td><span class="chip m-sol">gpt-5.6 sol</span></td><td class="num">$5.00</td><td class="num">$30.00</td><td class="num">×3.5 Ultra</td></tr>
+            <tr><td><span class="chip m-terra">gpt-5.6 terra</span></td><td class="num">$2.50</td><td class="num">$15.00</td><td class="num">—</td></tr>
+            <tr><td><span class="chip m-glm">glm-5.2</span></td><td class="num">$1.40</td><td class="num">$4.40</td><td class="num">per provider</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="chead"><h3>Spend by agent</h3><span class="sub">this project · effective billed</span></div>
+      <div class="cbody" style="padding-top:10px">
+        <table>
+          <tbody>
+            <tr><td><span class="agent a-coder">Coder</span></td><td><div style="height:8px;border-radius:4px;background:var(--line2)"><div style="height:8px;width:62%;border-radius:4px;background:var(--sonnet)"></div></div></td><td class="num" style="width:70px">$7.24</td></tr>
+            <tr><td><span class="agent a-reviewer">Reviewer</span></td><td><div style="height:8px;border-radius:4px;background:var(--line2)"><div style="height:8px;width:28%;border-radius:4px;background:var(--opus)"></div></div></td><td class="num">$3.21</td></tr>
+            <tr><td><span class="agent a-architect">Architect</span></td><td><div style="height:8px;border-radius:4px;background:var(--line2)"><div style="height:8px;width:20%;border-radius:4px;background:var(--sonnet)"></div></div></td><td class="num">$2.31</td></tr>
+            <tr><td><span class="agent a-tester">Tester</span></td><td><div style="height:8px;border-radius:4px;background:var(--line2)"><div style="height:8px;width:12%;border-radius:4px;background:var(--glm)"></div></div></td><td class="num">$1.42</td></tr>
+            <tr><td><span class="agent a-research">Research</span></td><td><div style="height:8px;border-radius:4px;background:var(--line2)"><div style="height:8px;width:3%;border-radius:4px;background:var(--terra)"></div></div></td><td class="num">$0.31</td></tr>
+            <tr><td><span class="agent a-docs">Docs</span></td><td><div style="height:8px;border-radius:4px;background:var(--line2)"></div></td><td class="num">$0.00</td></tr>
+            <tr><td style="font-weight:600">Reserved</td><td style="color:var(--muted);font-size:12px">in-flight dispatches</td><td class="num" style="font-weight:600">$3.10</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead"><h3>Multiplier ledger</h3><span class="sub">why logical ≠ billed</span></div>
+    <div class="cbody" style="padding:0">
+      <table>
+        <thead><tr><th>Factor</th><th class="num">Default</th><th>Applies to</th><th>Rationale</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">loop_multiplier</td><td class="num">×10</td><td>All agentic dispatches</td><td style="color:var(--muted);font-size:12px">Tool-use loops re-read context repeatedly</td></tr>
+          <tr><td class="mono">ultra_multiplier</td><td class="num">×3.5</td><td>sol-ultra calls</td><td style="color:var(--muted);font-size:12px">Parallel-subagent mode fans out tokens</td></tr>
+          <tr><td class="mono">tokenizer.code</td><td class="num">×1.10</td><td>Code-heavy context</td><td style="color:var(--muted);font-size:12px">Sonnet 5 tokenizer expansion</td></tr>
+          <tr><td class="mono">tokenizer.prose</td><td class="num">×1.20</td><td>Docs, research</td><td style="color:var(--muted);font-size:12px">Prose expands more than code</td></tr>
+          <tr><td class="mono">tokenizer.multilingual</td><td class="num">×1.35</td><td>i18n docs</td><td style="color:var(--muted);font-size:12px">Route to GLM-5.2 where possible</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

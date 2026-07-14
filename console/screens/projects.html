@@ -1,0 +1,13 @@
+<section class="screen" id="scr-projects">
+  <div class="shead">
+    <h1>Projects</h1>
+    <p>The project switcher surfaces active workspaces, current stage, primary routing posture, and checkpoint health before the operator enters a live plan.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="chead"><h3>Project switcher flow</h3><span class="sub">intake → architecture → implementation → review → delivery</span><span style="margin-left:auto;display:flex;gap:8px"><input id="projectFilter" class="param-input" type="text" placeholder="Filter by name, stack, or status" style="width:280px" /><button class="btn ghost sm" onclick="openProjectSwitcher()">Focus</button></span></div>
+    <div class="cbody" id="projectStats" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px"></div>
+  </div>
+
+  <div class="grid g3" id="projectList"></div>
+</section>

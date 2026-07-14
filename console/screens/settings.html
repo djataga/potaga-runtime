@@ -1,0 +1,28 @@
+<section class="screen" id="scr-settings">
+  <div class="shead">
+    <h1>Parameters</h1>
+    <p>Operator-tunable governance, rendered from <span class="mono">config/parameters.yaml</span>. Every value here changes runtime behavior — no hidden knobs.</p>
+  </div>
+  <div class="grid g2">
+    <div class="card" data-spec>
+      <span class="spectag" data-specid="SPEC-13">SPEC-13</span>
+      <div class="chead"><h3>Conflict resolution</h3></div>
+      <div class="cbody" style="padding:0"><table><tbody id="conflictParametersBody"></tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="chead"><h3>Quality gates</h3></div>
+      <div class="cbody" style="padding:0"><table><tbody id="qualityParametersBody"></tbody></table></div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <div class="chead"><h3>Config diff</h3><span class="sub">editable preview of versioned governance changes</span><span style="margin-left:auto;display:flex;gap:8px"><button class="btn ghost sm" id="previewConfigBtn">Preview diff</button><button class="btn primary sm" id="saveConfigBtn">Save parameters</button></span></div>
+      <div class="cbody"><pre class="scopebound" id="configDiff">No pending changes.</pre></div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <div class="chead"><h3>Memory stores</h3><span class="sub">partitioned · optimistic concurrency (SHA-256 preconditions, 5 retries)</span></div>
+      <div class="cbody" style="padding:0"><table>
+        <thead><tr><th>Store</th><th>Content</th><th>Write access</th></tr></thead>
+        <tbody id="memoryStoresBody"></tbody>
+      </table></div>
+    </div>
+  </div>
+</section>

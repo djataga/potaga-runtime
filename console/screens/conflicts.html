@@ -1,0 +1,29 @@
+<section class="screen" id="scr-conflicts">
+  <div class="shead">
+    <h1>Conflicts &amp; Escalation</h1>
+    <p>Every material disagreement becomes a conflict card and climbs a bounded 4-level ladder — one receiver, one timeout, one decision rule per rung. Termination is guaranteed in at most 4 hops.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px" data-spec>
+    <span class="spectag" data-specid="SPEC-10">SPEC-10</span>
+    <div class="chead"><h3>Escalation ladder</h3><span class="sub">tie-break order: Security &gt; Cost Ceiling &gt; Deadline &gt; Reversibility/Evidence &gt; Reviewer Authority</span></div>
+    <div class="cbody">
+      <div class="ladder">
+        <div class="rung"><span class="lvl">L0 · 4 min</span><b>Local resolution</b><small>Disagreeing agents score the card independently. Accept only if top option beats runner-up by ≥ 15% and no hard constraint is violated.</small><span class="to">→</span></div>
+        <div class="rung hot"><span class="lvl">L1 · 2 min</span><b>Orchestrator</b><small>Deterministic tie-break rules. Security Override always prefers the more secure option, regardless of score margin.</small><span class="to">→</span></div>
+        <div class="rung"><span class="lvl">L2 · 5 min</span><b>Architect</b><small>Cross-domain conflicts decided on architectural fit and ADRs, with documented reasoning.</small><span class="to">→</span></div>
+        <div class="rung"><span class="lvl">L3 · unbounded</span><b>Human</b><small>User preferences, budget, or irreversible decisions. Orchestrator pauses and waits.</small></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead"><h3>Conflict log</h3><span class="sub">click a row to open the full card</span></div>
+    <div class="cbody" style="padding:0">
+      <table>
+        <thead><tr><th>#</th><th>Type</th><th>Raised by / against</th><th>Level</th><th>Resolution</th></tr></thead>
+        <tbody id="conflictLogBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>

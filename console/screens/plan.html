@@ -1,0 +1,77 @@
+<section class="screen" id="scr-plan">
+  <div class="shead">
+    <h1>Plan &amp; Tasks</h1>
+    <p>The rendered MULTI_AGENT_PLAN.md. Agents post status to their cache partition; the Orchestrator merges serially. Click a task to open its contracts and scope boundary.</p>
+  </div>
+
+  <div class="checkpoint" id="checkpoint" data-spec>
+    <span class="spectag" data-specid="SPEC-07">SPEC-07</span>
+    <div class="ic">✋</div>
+    <div><b>Human checkpoint — Security finding</b><p id="cpText">Reviewer flagged a critical: JWT secret sourced from a default env value. Approve remediation plan to continue.</p></div>
+    <div class="acts">
+      <button class="btn ghost sm" onclick="toast('Change request sent to Reviewer · logged in Decision Log')">Request changes</button>
+      <button class="btn primary sm" id="approveBtn">Approve remediation</button>
+    </div>
+  </div>
+
+  <div class="gatebar" data-spec>
+    <span class="spectag" data-specid="SPEC-08">SPEC-08</span>
+    <div class="gate pass"><b>1 · Architecture</b>Approved by human · ADR-001…003</div>
+    <div class="gate pass"><b>2 · Implementation</b>Sandbox-verified · 14 files</div>
+    <div class="gate pass"><b>3 · Tests</b>78% coverage · 42/42 passing</div>
+    <div class="gate hold"><b>4 · Review</b>OWASP audit in progress</div>
+    <div class="gate pend"><b>5 · Docs</b>Awaiting approval gate</div>
+  </div>
+
+  <div class="card">
+    <div class="chead"><h3>Tasks</h3><span class="sub">9 subtasks · dependency-ordered</span><span style="margin-left:auto;display:flex;gap:8px"><button class="btn ghost sm" onclick="toast('Plan re-decomposition requested · Sonnet 5 @ high')">Re-decompose</button></span></div>
+    <div class="cbody" style="padding:0">
+      <table id="taskTable">
+        <thead><tr><th style="width:26px"></th><th>Task</th><th>Agent</th><th>Model / effort</th><th>Deps</th><th>Status</th><th class="num">Cost</th></tr></thead>
+        <tbody>
+          <tr class="click taskrow" onclick="flip(this)">
+            <td><span class="caret">▶</span></td><td><b>1</b> · Define architecture &amp; contracts</td>
+            <td><span class="agent a-architect">Architect</span></td><td><span class="chip m-sonnet">sonnet-5 @ high</span></td>
+            <td class="mono" style="font-size:12px">—</td><td><span class="status s-done"><span class="dot"></span>completed</span></td><td class="num">$2.31</td>
+          </tr>
+          <tr class="exp"><td></td><td colspan="6"><div class="contract"><div><div class="lab">Input contract</div>Verbatim user request from plan header.</div><div><div class="lab">Output contract</div>Dependency graph + JSON-Schema contracts → <span class="mono">potaga-shared</span>. ADR-001…003.</div><div><div class="lab">Success criteria</div>Human approval gate passed; every handoff has a machine-readable contract.</div><div><div class="lab">Security</div><span class="mono">false</span></div></div><div class="scopebound">ONLY the architecture for a REST task API with JWT auth and PostgreSQL — no deployment infra, no frontend.</div></td></tr>
+
+          <tr class="click taskrow" onclick="flip(this)">
+            <td><span class="caret">▶</span></td><td><b>3</b> · Research JWT &amp; PostgreSQL practices</td>
+            <td><span class="agent a-research">Research</span></td><td><span class="chip m-terra">terra @ base</span></td>
+            <td class="mono" style="font-size:12px">—</td><td><span class="status s-done"><span class="dot"></span>completed</span></td><td class="num">$0.31</td>
+          </tr>
+          <tr class="exp"><td></td><td colspan="6"><div class="contract"><div><div class="lab">Input contract</div>Questions from Architect: JWT rotation, bcrypt vs argon2, connection pooling.</div><div><div class="lab">Output contract</div>Comparison tables + CVE check → <span class="mono">potaga-research</span> with URL + retrieval date per fact.</div><div><div class="lab">Success criteria</div>3 searches + 2 fetches budget respected; confidence labels on all findings.</div><div><div class="lab">Note</div>Compare, don't recommend — decisions belong to the Architect.</div></div></td></tr>
+
+          <tr class="click taskrow" onclick="flip(this)">
+            <td><span class="caret">▶</span></td><td><b>5</b> · Implement auth endpoints</td>
+            <td><span class="agent a-coder">Coder</span></td><td><span class="chip m-sonnet">sonnet-5 @ high</span></td>
+            <td class="mono" style="font-size:12px">1, 3</td><td><span class="status s-done"><span class="dot"></span>completed</span></td><td class="num">$4.12</td>
+          </tr>
+          <tr class="exp"><td></td><td colspan="6"><div class="contract"><div><div class="lab">Input contract</div>Auth contract (ADR-002) + research findings from <span class="mono">potaga-research</span>.</div><div><div class="lab">Output contract</div><span class="mono">/auth/login</span>, <span class="mono">/auth/refresh</span> + tests → <span class="mono">potaga-code</span>; deps pinned in <span class="mono">dependencies.md</span>.</div><div><div class="lab">Success criteria</div>Sandbox-verified; full suite green; no scope expansion &gt; 1.3×.</div><div><div class="lab">Security</div><span class="mono">true</span> — review floor: Opus 4.8</div></div><div class="scopebound">ONLY the user-authentication endpoints — do not add rate limiting, logging middleware, or caching unless specified.</div></td></tr>
+
+          <tr class="click taskrow" onclick="flip(this)">
+            <td><span class="caret">▶</span></td><td><b>6</b> · Implement task CRUD</td>
+            <td><span class="agent a-coder">Coder</span></td><td><span class="chip m-sonnet">sonnet-5 @ high</span></td>
+            <td class="mono" style="font-size:12px">1</td><td><span class="status s-run"><span class="dot"></span>in_progress</span></td><td class="num">$2.87</td>
+          </tr>
+          <tr class="exp"><td></td><td colspan="6"><div class="contract"><div><div class="lab">Input contract</div>Resource contract (ADR-003): Task schema, pagination, ownership rules.</div><div><div class="lab">Output contract</div>CRUD routes + repository layer → <span class="mono">potaga-code</span>.</div><div><div class="lab">Success criteria</div>Sandbox-verified; regression suite green.</div><div><div class="lab">Security</div><span class="mono">true</span> (data handling)</div></div><div class="scopebound">ONLY task CRUD per ADR-003 — no soft-delete, no audit log, no bulk import.</div></td></tr>
+
+          <tr class="click taskrow" onclick="flip(this)">
+            <td><span class="caret">▶</span></td><td><b>7</b> · Security review — auth module</td>
+            <td><span class="agent a-reviewer">Reviewer</span></td><td><span class="chip m-opus">opus-4.8 @ high</span> <span class="chip m-sol" style="text-decoration:line-through;opacity:.55">sol @ ultra</span></td>
+            <td class="mono" style="font-size:12px">5</td><td><span class="status s-run"><span class="dot"></span>in_progress</span></td><td class="num">$1.94</td>
+          </tr>
+          <tr class="exp"><td></td><td colspan="6"><div class="contract"><div><div class="lab">Input contract</div>Auth module from <span class="mono">potaga-code</span> + Tester's coverage report.</div><div><div class="lab">Output contract</div>OWASP checklist + verdict → <span class="mono">potaga-reviews</span>; explicit APPROVED / REJECTED.</div><div><div class="lab">Routing note</div>Primary Sol Ultra unavailable → degraded mode, Opus 4.8 floor holds (never below).</div><div><div class="lab">Security</div><span class="mono">true</span> — critical findings raise [HUMAN REQUIRED]</div></div></td></tr>
+
+          <tr class="click taskrow" onclick="flip(this)">
+            <td><span class="caret">▶</span></td><td><b>9</b> · README + OpenAPI docs</td>
+            <td><span class="agent a-docs">Docs</span></td><td><span class="chip m-sonnet">sonnet-5 @ medium</span></td>
+            <td class="mono" style="font-size:12px">5, 6, 7</td><td><span class="status s-block"><span class="dot"></span>blocked: gate</span></td><td class="num">—</td>
+          </tr>
+          <tr class="exp"><td></td><td colspan="6"><div class="contract"><div><div class="lab">Input contract</div>Approved code only (Reviewer gate) from <span class="mono">potaga-code</span>.</div><div><div class="lab">Output contract</div>README + OpenAPI 3.1 spec → <span class="mono">potaga-docs</span>; every example sandbox-verified.</div><div><div class="lab">Success criteria</div>Zero-behavior-change diff; no aspirational content.</div><div><div class="lab">Blocked reason</div>Docs finalize only after Reviewer approval (gate 4).</div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

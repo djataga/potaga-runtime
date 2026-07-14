@@ -1,0 +1,462 @@
+{
+  "project": {
+    "name": "taskflow-api",
+    "crumb": "REST API · JWT auth · PostgreSQL",
+    "progressText": "In progress · 6/9 tasks",
+    "pricingEpoch": "intro",
+    "degradedBannerHtml": "<b>Sol Ultra → Opus 4.8.</b> Preview backend unavailable; security review and deep debugging rerouted to the GA fallback chain. Notified once per session."
+  },
+  "overview": {
+    "availability": [
+      {
+        "id": "sonnet-5",
+        "label": "Claude Sonnet 5",
+        "note": "primary · effort medium–high",
+        "tier": "GA",
+        "status": "ok"
+      },
+      {
+        "id": "opus-4.8",
+        "label": "Claude Opus 4.8",
+        "note": "hardest-tier escalation",
+        "tier": "GA",
+        "status": "ok"
+      },
+      {
+        "id": "sol-ultra",
+        "label": "GPT-5.6 Sol / Ultra",
+        "note": "deep debugging · security review",
+        "tier": "PREVIEW",
+        "status": "down"
+      },
+      {
+        "id": "terra",
+        "label": "GPT-5.6 Terra",
+        "note": "research primary",
+        "tier": "PREVIEW",
+        "status": "preview"
+      },
+      {
+        "id": "glm-5.2",
+        "label": "GLM-5.2",
+        "note": "UI/design · high-volume · 4 providers",
+        "tier": "GA",
+        "status": "ok"
+      }
+    ],
+    "budget": {
+      "spentLabel": "$14.65",
+      "metaLabel": "of $25.00 · 58.6%",
+      "reservedLabel": "Spent $14.65 · reserved $3.10",
+      "softLabel": "80% soft — prefer GLM/Terra, non-critical",
+      "hardLabel": "90% hard — pause for user confirmation"
+    },
+    "decisionLog": [
+      {
+        "time": "14:58:12",
+        "type": "degraded",
+        "message": "Sol Ultra unavailable → security_review now Opus 4.8 @ high"
+      },
+      {
+        "time": "14:51:40",
+        "type": "conflict",
+        "message": "Card #001 resolved L1 · Security Override · fix SQL injection now"
+      },
+      {
+        "time": "14:47:03",
+        "type": "gate",
+        "message": "Task 5 coverage 78% ≥ 70% · Tester → Reviewer"
+      },
+      {
+        "time": "14:31:22",
+        "type": "fallback",
+        "message": "GLM-5.2 UI rejected ×2 → escalate to Sonnet 5 @ high (2-strike rule)"
+      },
+      {
+        "time": "14:12:09",
+        "type": "routing",
+        "message": "Task 7 research → Terra @ base · budget reserved $0.31"
+      },
+      {
+        "time": "13:58:44",
+        "type": "safeguard",
+        "message": "Reviewer subtask blocked: exploit-repro declined · rerouted defensive-only"
+      }
+    ],
+    "agentActivity": [
+      {
+        "agent": "Coder",
+        "agentClass": "a-coder",
+        "model": "sonnet-5 @ high",
+        "modelClass": "m-sonnet",
+        "statusClass": "s-run",
+        "statusText": "Task 6 · CRUD endpoints"
+      },
+      {
+        "agent": "Reviewer",
+        "agentClass": "a-reviewer",
+        "model": "opus-4.8 @ high",
+        "modelClass": "m-opus",
+        "statusClass": "s-run",
+        "statusText": "OWASP audit · auth module"
+      },
+      {
+        "agent": "Tester",
+        "agentClass": "a-tester",
+        "model": "sonnet-5 @ medium",
+        "modelClass": "m-sonnet",
+        "statusClass": "s-wait",
+        "statusText": "Queued · sandbox busy"
+      },
+      {
+        "agent": "Research",
+        "agentClass": "a-research",
+        "model": "terra @ base",
+        "modelClass": "m-terra",
+        "statusClass": "s-done",
+        "statusText": "JWT findings stored"
+      },
+      {
+        "agent": "Architect",
+        "agentClass": "a-architect",
+        "model": "sonnet-5 @ high",
+        "modelClass": "m-sonnet",
+        "statusClass": "s-done",
+        "statusText": "ADR-003 accepted"
+      },
+      {
+        "agent": "Docs",
+        "agentClass": "a-docs",
+        "model": "sonnet-5 @ medium",
+        "modelClass": "m-sonnet",
+        "statusClass": "s-block",
+        "statusText": "blocked: awaits Reviewer approval"
+      }
+    ]
+  },
+  "routing": {
+    "matrix": [
+      {
+        "route": "backend_coding",
+        "primary": "<span class=\"chip m-sonnet\">sonnet-5 @ high</span>",
+        "fallback": "<span class=\"chip m-opus\">opus-4.8 @ medium</span> <span class=\"chip m-glm\">glm-5.2 @ High</span>",
+        "notes": "Critical",
+        "preview": false
+      },
+      {
+        "route": "hardest_coding",
+        "primary": "<span class=\"chip m-sol\">sol @ ultra</span>",
+        "fallback": "<span class=\"chip m-opus\">opus-4.8 @ medium</span> <span class=\"chip m-sonnet\" style=\"opacity:.6\">sonnet-5 @ xhigh (off)</span>",
+        "notes": "Opus is primary by design — xhigh disabled",
+        "preview": true
+      },
+      {
+        "route": "deep_debugging",
+        "primary": "<span class=\"chip m-sol\">sol @ ultra</span>",
+        "fallback": "<span class=\"chip m-opus\">opus-4.8 @ high</span> <span class=\"chip m-sonnet\">sonnet-5 @ high</span>",
+        "notes": "×3.5 Ultra multiplier reserved at budget time",
+        "preview": true
+      },
+      {
+        "route": "security_review",
+        "primary": "<span class=\"chip m-sol\">sol @ ultra</span>",
+        "fallback": "<span class=\"chip m-opus\">opus-4.8 @ high</span>",
+        "notes": "<b>Floor: opus-4.8</b> — auth/crypto/data never route below",
+        "preview": true
+      },
+      {
+        "route": "frontend_ui",
+        "primary": "<span class=\"chip m-glm\">glm-5.2 @ High</span>",
+        "fallback": "<span class=\"chip m-sonnet\">sonnet-5 @ high</span>",
+        "notes": "Escalate after 2 Reviewer rejections",
+        "preview": false
+      }
+    ]
+  },
+  "conflicts": {
+    "log": [
+      {
+        "id": "001",
+        "type": "quality-speed",
+        "parties": "<span class=\"agent a-tester\">Tester</span> vs <span class=\"agent a-coder\">Coder</span>",
+        "level": "L1",
+        "resolution": "Security Override — fix SQL injection now",
+        "action": "onclick=\"openModal()\""
+      },
+      {
+        "id": "002",
+        "type": "resource",
+        "parties": "<span class=\"agent a-coder\">Coder</span> vs <span class=\"agent a-tester\">Tester</span>",
+        "level": "L1",
+        "resolution": "Sandbox serialized · Coder first",
+        "action": "onclick=\"toast('Card #002: resource — Orchestrator serialized sandbox; Coder first, Tester queued (+0.2 priority)')\""
+      },
+      {
+        "id": "003",
+        "type": "priority",
+        "parties": "<span class=\"agent a-architect\">Architect</span> vs <span class=\"agent a-research\">Research</span>",
+        "level": "L2",
+        "resolution": "PostgreSQL + migration plan",
+        "action": "onclick=\"toast('Card #003: priority — L2 Architect kept PostgreSQL with a migration plan (Reversibility Preference)')\""
+      }
+    ]
+  },
+  "settings": {
+    "version": "v4.0",
+    "conflictResolution": [
+      {
+        "key": "local_acceptance_margin",
+        "value": "0.15",
+        "note": "range 0.05–0.30"
+      },
+      {
+        "key": "l0_timeout_s",
+        "value": "240",
+        "note": "local resolution timeout"
+      },
+      {
+        "key": "l1_timeout_s",
+        "value": "120",
+        "note": "orchestrator timeout"
+      },
+      {
+        "key": "l2_timeout_s",
+        "value": "300",
+        "note": "architect timeout"
+      },
+      {
+        "key": "security_auto_escalate",
+        "value": "true",
+        "note": "auth/crypto/data conflicts skip margins"
+      }
+    ],
+    "qualityGates": [
+      {
+        "key": "coverage_threshold",
+        "value": "0.70",
+        "note": "line coverage on new code"
+      },
+      {
+        "key": "overengineering_threshold",
+        "value": "1.3",
+        "note": "scope ratio → auto-reject"
+      },
+      {
+        "key": "reviewer_approval_required",
+        "value": "true",
+        "note": "before delivery"
+      },
+      {
+        "key": "budget_soft_pct",
+        "value": "80",
+        "note": "prefer-cheap threshold"
+      },
+      {
+        "key": "budget_hard_pct",
+        "value": "90",
+        "note": "pause-for-user threshold"
+      }
+    ],
+    "memoryStores": [
+      {
+        "store": "potaga-shared",
+        "content": "Plan, ADRs, conflict log, conventions",
+        "access": "Architect · Docs · Research · Orchestrator-only plan merges"
+      },
+      {
+        "store": "potaga-code",
+        "content": "Source, configs, dependencies.md",
+        "access": "Coder"
+      },
+      {
+        "store": "potaga-tests",
+        "content": "Results, coverage, failure analysis",
+        "access": "Tester"
+      },
+      {
+        "store": "potaga-reviews",
+        "content": "Findings, OWASP checklists, verdicts",
+        "access": "Reviewer"
+      },
+      {
+        "store": "potaga-docs",
+        "content": "README, API docs, changelogs",
+        "access": "Docs"
+      },
+      {
+        "store": "potaga-research",
+        "content": "Findings + provenance (URL, date, query)",
+        "access": "Research"
+      },
+      {
+        "store": "potaga-cache",
+        "content": "Per-agent status partitions",
+        "access": "All · own /cache/<agent>/ prefix"
+      }
+    ]
+  },
+  "projects": {
+    "stats": [
+      {
+        "label": "3 active projects",
+        "note": "2 in delivery, 1 in architecture",
+        "state": "ok"
+      },
+      {
+        "label": "1 blocked",
+        "note": "awaiting human checkpoint",
+        "state": "preview"
+      },
+      {
+        "label": "0 hidden reroutes",
+        "note": "all degraded-mode changes surfaced",
+        "state": "ok"
+      },
+      {
+        "label": "Budget headroom",
+        "note": "$10.35 remaining across visible runs",
+        "state": "ok"
+      }
+    ],
+    "items": [
+      {
+        "id": "taskflow-api",
+        "name": "taskflow-api",
+        "summary": "REST API · JWT auth · PostgreSQL",
+        "stack": "Node · Postgres · OpenAPI",
+        "primary": "sonnet-5 @ high",
+        "escalation": "opus-4.8 @ medium",
+        "phase": "Phase 5 · conflict resolution",
+        "status": "in progress",
+        "statusClass": "s-run",
+        "search": "taskflow-api rest api · jwt auth · postgresql node · postgres · openapi in progress phase 5 · conflict resolution"
+      },
+      {
+        "id": "studio-web",
+        "name": "studio-web",
+        "summary": "Marketing site · CMS sync · analytics",
+        "stack": "Next.js · Edge · CMS",
+        "primary": "glm-5.2 @ High",
+        "escalation": "sonnet-5 @ high",
+        "phase": "Phase 3 · frontend routing",
+        "status": "review",
+        "statusClass": "s-wait",
+        "search": "studio-web marketing site · cms sync · analytics next.js · edge · cms review phase 3 · frontend routing"
+      },
+      {
+        "id": "infra-guard",
+        "name": "infra-guard",
+        "summary": "Policy checks · drift review · deployment gates",
+        "stack": "Go · OPA · CI",
+        "primary": "sonnet-5 @ high",
+        "escalation": "opus-4.8 @ high",
+        "phase": "Onboarding",
+        "status": "blocked",
+        "statusClass": "s-block",
+        "search": "infra-guard policy checks · drift review · deployment gates go · opa · ci blocked onboarding"
+      }
+    ]
+  },
+  "onboarding": {
+    "checklist": [
+      {
+        "id": "goal",
+        "title": "Goal and acceptance criteria captured",
+        "note": "Required before plan decomposition",
+        "done": true
+      },
+      {
+        "id": "constraints",
+        "title": "Constraints and non-goals pinned",
+        "note": "Prevents scope expansion beyond 1.3 threshold",
+        "done": true
+      },
+      {
+        "id": "budget",
+        "title": "Budget ceiling approved",
+        "note": "Soft 80% and hard 90% thresholds visible to the operator",
+        "done": false
+      },
+      {
+        "id": "availability",
+        "title": "Backend availability snapshot recorded",
+        "note": "Sol/Terra preview gating and degraded-mode posture stored",
+        "done": false
+      },
+      {
+        "id": "checkpoint",
+        "title": "Human checkpoint owner assigned",
+        "note": "Architecture and deployment checkpoints cannot be anonymous",
+        "done": true
+      }
+    ],
+    "timeline": [
+      {
+        "step": "1",
+        "kind": "routing",
+        "detail": "Create intake shell and classify project type"
+      },
+      {
+        "step": "2",
+        "kind": "gate",
+        "detail": "Reserve initial budget envelope and pricing epoch"
+      },
+      {
+        "step": "3",
+        "kind": "routing",
+        "detail": "Attach stores and initialize plan document"
+      },
+      {
+        "step": "4",
+        "kind": "conflict",
+        "detail": "Require architectural checkpoint before irreversible changes"
+      },
+      {
+        "step": "5",
+        "kind": "degraded",
+        "detail": "Notify operator if preview backends are unavailable at kickoff"
+      }
+    ]
+  },
+  "adrs": {
+    "selected": "ADR-003",
+    "items": [
+      {
+        "id": "ADR-001",
+        "title": "Shared planning document as single source of truth",
+        "status": "accepted",
+        "owner": "Architect",
+        "scope": "orchestration core",
+        "active": false,
+        "context": "Direct agent-to-agent messaging was rejected to keep routing, conflicts, and state merges auditable.",
+        "decision": "All agent coordination flows through MULTIAGENTPLAN.md plus partitioned memory stores.",
+        "consequences": "Plan merges stay serialized and reviewable, but agents need stronger plan hygiene.",
+        "links": "MULTIAGENTPLAN.md · potaga-shared · architecture/spec §3 §7"
+      },
+      {
+        "id": "ADR-002",
+        "title": "Availability-aware degraded routing",
+        "status": "accepted",
+        "owner": "Orchestrator",
+        "scope": "routing policy",
+        "active": false,
+        "context": "Preview-gated backends can disappear mid-project, especially Sol Ultra and Terra.",
+        "decision": "Every preview-backed route must declare a same-tier GA fallback chain and surface the swap to the user.",
+        "consequences": "Routing remains resilient, but UX must clearly show degraded-mode state and once-per-session notifications.",
+        "links": "routing_matrix.yaml · decision log · architecture/spec §4.5 §4.6"
+      },
+      {
+        "id": "ADR-003",
+        "title": "Opus 4.8 as hardest-tier fallback above Sonnet xhigh",
+        "status": "accepted",
+        "owner": "Architect",
+        "scope": "model economics",
+        "active": true,
+        "context": "The v4 model strategy treats effort as a first-class routing dimension rather than a simple model pick.",
+        "decision": "Use Opus 4.8 at medium/high for hardest-tier tasks instead of relying on Sonnet xhigh by default.",
+        "consequences": "Cost-per-solved-task improves on difficult work, and the UI must show both model and effort in routing views.",
+        "links": "config/routing_matrix.yaml · budget ledger · architecture/spec C-2 §4.3 §4.4"
+      }
+    ]
+  }
+}

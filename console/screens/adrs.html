@@ -1,0 +1,20 @@
+<section class="screen" id="scr-adrs">
+  <div class="shead">
+    <h1>ADR Browser</h1>
+    <p>Architectural decisions are versioned, attributable, and linked back to the shared planning document so model switches and scope choices stay reviewable.</p>
+  </div>
+
+  <div class="grid" style="grid-template-columns:320px 1fr;gap:16px">
+    <div class="card">
+      <div class="chead"><h3>Decision index</h3><span class="sub">filter by topic or status</span></div>
+      <div class="cbody" style="display:grid;gap:10px">
+        <input id="adrFilter" class="param-input" type="text" placeholder="Filter ADRs" />
+        <div id="adrList" style="display:grid;gap:8px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="chead"><h3>Decision detail</h3><span class="sub">context, choice, consequences, links</span></div>
+      <div class="cbody" id="adrDetail"></div>
+    </div>
+  </div>
+</section>

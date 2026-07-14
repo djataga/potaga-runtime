@@ -1,0 +1,31 @@
+<section class="screen" id="scr-routing">
+  <div class="shead">
+    <h1>Model Routing</h1>
+    <p>The router selects a <span class="mono">(model, effort)</span> pair per subtask — availability-filtered, then CQP-scored. Toggle Sol Ultra offline to preview the degraded-mode table the runtime would swap in.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:16px" data-spec>
+    <span class="spectag" data-specid="SPEC-09">SPEC-09</span>
+    <div class="chead">
+      <h3>Degraded-mode simulator</h3>
+      <span class="sub">Availability Monitor override</span>
+      <label class="toggle" style="margin-left:auto">
+        <span id="solLabel">Sol Ultra: <b style="color:var(--danger)">offline</b></span>
+        <span class="switch on" id="solSwitch" role="switch" aria-checked="true" tabindex="0" style="background:var(--danger)"></span>
+      </label>
+    </div>
+    <div class="cbody" style="font-size:12.5px;color:var(--muted)">
+      Preview-gated backends are never hard dependencies. When status is not <span class="mono">available</span>, sol-ultra rows are skipped and each route falls to its GA chain. The swap is logged as <span class="mono">degraded-mode</span> and the user is notified once per session — no silent fallbacks, ever.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead"><h3>Routing matrix</h3><span class="sub mono">config/routing_matrix.yaml</span></div>
+    <div class="cbody" style="padding:0">
+      <table id="routeTable">
+        <thead><tr><th>Route</th><th>Active primary</th><th>Fallback chain</th><th>Notes</th></tr></thead>
+        <tbody id="routeTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>

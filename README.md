@@ -1,5 +1,7 @@
 # potaga-runtime
 
+![CI](https://github.com/djataga/potaga-runtime/actions/workflows/ci.yml/badge.svg)
+
 Complete reference implementation (roadmap Phases 1 + 3–6) of the Potaga orchestration runtime. It consumes the
 [potaga prompt pack](https://github.com/djataga/potaga) (v4.2) and wires the dispatch path end-to-end.
 Phase 1: agent loop, planning document, task decomposition. Phase 3: multi-model
@@ -67,6 +69,21 @@ GLM-5.2), Sol Ultra containment, and full §B.5 fallback-chain escalation.
 With Phase 6, all ten policy points of `prompts/07_orchestrator.md` §B have running code
 behind them. Remaining beyond the roadmap: true parallel dispatch (the waiting-cycle
 scanner from Phase 5 is ready for it) and container-grade sandbox isolation.
+
+## Console
+
+`console/` holds the operator UI (moved from the prompt-pack repo, which is
+prompts-and-governance only). `cd console && npm install && npm run dev` runs it
+in mock mode; see `console/README.md` for the runtime API contract it expects.
+
+## CI as a cross-repo integration test
+
+`.github/workflows/ci.yml` pins a prompt-pack ref (default `v4.2.0`), first runs a
+**pack-compat** job (can the runtime's config validator boot against that pack?),
+then the full test suite with `POTAGA_REPO` pointing at the clone. If a pack change
+violates a runtime invariant, this build goes red with a named reason — bumping the
+pin is a deliberate act, never a surprise. The `v4.2.0` tag is live, so this
+goes green on the first push.
 
 ## Quick start
 

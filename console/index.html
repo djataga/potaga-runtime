@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Potaga — Orchestration Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/tokens.css" />
+  <link rel="stylesheet" href="./css/base.css" />
+  <link rel="stylesheet" href="./css/shell.css" />
+  <link rel="stylesheet" href="./css/components.css" />
+  <link rel="stylesheet" href="./css/screens.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="rail">
+      <div class="brand">
+        <div class="glyph">P</div>
+        <div><b>Potaga</b><small>Orchestration Console</small></div>
+      </div>
+      <nav>
+        <div class="navsec">Workspace</div>
+        <button class="navlink active" data-nav="projects"><span class="ic">▤</span><span class="txt">Projects</span></button>
+        <button class="navlink" data-nav="overview"><span class="ic">◧</span><span class="txt">Overview</span></button>
+        <button class="navlink" data-nav="onboarding"><span class="ic">⇢</span><span class="txt">Onboarding</span></button>
+        <button class="navlink" data-nav="plan"><span class="ic">☰</span><span class="txt">Plan &amp; Tasks</span></button>
+        <button class="navlink" data-nav="routing"><span class="ic">⇄</span><span class="txt">Model Routing</span></button>
+        <button class="navlink" data-nav="conflicts"><span class="ic">⚖</span><span class="txt">Conflicts</span></button>
+        <button class="navlink" data-nav="budget"><span class="ic">◔</span><span class="txt">Budget &amp; Cost</span></button>
+        <div class="navsec">System</div>
+        <button class="navlink" data-nav="agents"><span class="ic">⬡</span><span class="txt">Agents</span></button>
+        <button class="navlink" data-nav="adrs"><span class="ic">⌘</span><span class="txt">ADR Browser</span></button>
+        <button class="navlink" data-nav="settings"><span class="ic">⚙</span><span class="txt">Parameters</span></button>
+      </nav>
+      <div class="foot">
+        <div>Prompt pack <span class="mono">v4.1</span></div>
+        <div>Spec <span class="mono">v4.0</span> · epoch <span class="mono" id="epochLabel">intro</span></div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="projswitch" data-spec onclick="go('projects')" role="button" tabindex="0" title="Open project switcher">
+          <span class="spectag" data-specid="SPEC-01">SPEC-01</span>
+          📁 <span id="projectName">taskflow-api</span> <span class="chev">▾</span>
+        </div>
+        <span class="crumb" id="projectCrumb">REST API · JWT auth · PostgreSQL</span>
+        <span class="pill run"><span class="dot"></span> <span id="progressPillText">In progress · 6/9 tasks</span></span>
+        <div class="spacer"></div>
+        <label class="toggle" title="Toggle specification annotations">
+          <span>Spec notes</span>
+          <span class="switch" id="specSwitch" role="switch" aria-checked="false" tabindex="0"></span>
+        </label>
+        <div class="avatar">DJ</div>
+      </header>
+
+      <div class="banner degraded" id="degradedBanner" data-spec>
+        <span class="spectag" data-specid="SPEC-02">SPEC-02</span>
+        <span class="tag">DEGRADED MODE</span>
+        <span id="degradedBannerText"><b>Sol Ultra → Opus 4.8.</b> Preview backend unavailable; security review and deep debugging rerouted to the GA fallback chain. Notified once per session.</span>
+        <span class="bspace"></span>
+        <button onclick="go('routing')">View routing table</button>
+      </div>
+
+      <main class="content" id="screenMount"></main>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Conflict card 001">
+      <div class="mhead"><h3>Conflict Card #001 — quality-speed</h3><button class="x" onclick="closeModal()" aria-label="Close">✕</button></div>
+      <div class="mbody">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+          <span class="agent a-tester">Raised: Tester</span><span class="agent a-coder">Against: Coder</span>
+          <span class="pill" style="background:#FCEEE9;color:var(--danger)"><span class="dot" style="background:var(--danger)"></span>security-relevant · auto-escalated</span>
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Tester found 2 failing edge cases on the auth endpoint (empty password, SQL-injection vector). Coder argues these are out of MVP scope.</p>
+        <div class="kicker" style="margin-bottom:6px">Options &amp; scores — score = org_value − risk − reversibility + evidence</div>
+        <table class="scoretab">
+          <thead><tr><th>Dimension</th><th class="num">A · Fix now (Tester)</th><th class="num">B · Ship, log debt (Coder)</th></tr></thead>
+          <tbody>
+            <tr><td>Org value</td><td class="num">8</td><td class="num">6</td></tr>
+            <tr><td>Risk penalty</td><td class="num">2</td><td class="num">7</td></tr>
+            <tr><td>Reversibility penalty</td><td class="num">—</td><td class="num">5</td></tr>
+            <tr><td>Evidence bonus</td><td class="num">5</td><td class="num">3</td></tr>
+            <tr><td style="font-weight:600">Total</td><td class="num" style="font-weight:600">20</td><td class="num" style="font-weight:600">7</td></tr>
+          </tbody>
+        </table>
+        <div class="verdict">
+          <b>Resolved at L1 — Security Override.</b> Option B violated a hard constraint (SQL-injection vector), so the card auto-escalated past the 65% margin. Decision: fix now. Task 5 re-opened; Task 9 blocked +15 min. Full card logged to <span class="mono">potaga-shared</span>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="drawer" id="drawer" aria-label="Specification notes">
+    <div class="dhead"><h3>Specification notes</h3><span class="sub" style="color:var(--muted);font-size:12px">13 requirements</span><button class="x" onclick="closeDrawer()" aria-label="Close">✕</button></div>
+    <div class="dbody" id="drawerBody"></div>
+  </aside>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

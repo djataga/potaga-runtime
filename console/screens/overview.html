@@ -1,0 +1,64 @@
+<section class="screen active" id="scr-overview">
+  <div class="shead">
+    <h1>Overview</h1>
+    <p>Mission control for one Potaga project: backend availability, budget ledger, quality gates, and the live decision log — every routing choice visible, never silent.</p>
+  </div>
+
+  <div class="grid g3" style="margin-bottom:16px">
+    <div class="card" data-spec>
+      <span class="spectag" data-specid="SPEC-03">SPEC-03</span>
+      <div class="chead"><h3>Backend availability</h3><span class="sub">Availability Monitor · polled 60s</span></div>
+      <div class="cbody" id="availabilityList" style="display:grid;gap:8px"></div>
+    </div>
+
+    <div class="card" data-spec>
+      <span class="spectag" data-specid="SPEC-04">SPEC-04</span>
+      <div class="chead"><h3>Budget ledger</h3><span class="sub">reserved at dispatch</span></div>
+      <div class="cbody">
+        <div class="dialwrap">
+          <div class="dial">
+            <svg width="118" height="118" viewBox="0 0 118 118">
+              <circle cx="59" cy="59" r="50" fill="none" stroke="#E7ECF0" stroke-width="11"/>
+              <circle cx="59" cy="59" r="50" fill="none" stroke="#3554D1" stroke-width="11" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="130"/>
+              <circle cx="59" cy="59" r="50" fill="none" stroke="#C77700" stroke-width="3" stroke-dasharray="2 312" stroke-dashoffset="-249"/>
+              <circle cx="59" cy="59" r="50" fill="none" stroke="#BE3A2E" stroke-width="3" stroke-dasharray="2 312" stroke-dashoffset="-280"/>
+            </svg>
+            <div class="dc"><div><b id="budgetSpentValue">$14.65</b><small id="budgetMetaValue">of $25.00 · 58.6%</small></div></div>
+          </div>
+          <div class="thresh">
+            <div class="row"><span class="sw" style="background:#3554D1"></span> <span id="budgetReservedValue">Spent $14.65 · reserved $3.10</span></div>
+            <div class="row"><span class="sw" style="background:#C77700"></span> <span id="budgetSoftValue">80% soft — prefer GLM/Terra, non-critical</span></div>
+            <div class="row"><span class="sw" style="background:#BE3A2E"></span> <span id="budgetHardValue">90% hard — pause for user confirmation</span></div>
+            <div class="row" style="color:var(--faint)">Effective = logical × 10 loop × 3.5 Ultra × tokenizer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" data-spec>
+      <span class="spectag" data-specid="SPEC-05">SPEC-05</span>
+      <div class="chead"><h3>Quality gates</h3><span class="sub">enforced by Orchestrator</span></div>
+      <div class="cbody" style="display:grid;gap:9px;font-size:12.5px">
+        <div class="lamp"><span class="light ok"></span><div><b>Static analysis</b><small>Semgrep pass required before Coder → Tester</small></div></div>
+        <div class="lamp"><span class="light ok"></span><div><b>Coverage ≥ 70%</b><small>current 78% on new code</small></div></div>
+        <div class="lamp"><span class="light preview"></span><div><b>Reviewer approval</b><small>final holistic review pending</small></div></div>
+        <div class="lamp"><span class="light preview"></span><div><b>Human checkpoints</b><small>1 open — architecture approved, deploy pending</small></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card" data-spec>
+      <span class="spectag" data-specid="SPEC-06">SPEC-06</span>
+      <div class="chead"><h3>Decision log</h3><span class="sub">MULTI_AGENT_PLAN.md · single writer</span><span style="margin-left:auto"><button class="btn ghost sm" onclick="toast('Decision log exported to <span class=mono>potaga-shared:/exports/</span>')">Export</button></span></div>
+      <div class="cbody log" id="decisionLogList"></div>
+    </div>
+
+    <div class="card">
+      <div class="chead"><h3>Agent activity</h3><span class="sub">now</span></div>
+      <div class="cbody" style="padding:6px 16px">
+        <table><tbody id="agentActivityTable"></tbody></table>
+      </div>
+    </div>
+  </div>
+</section>

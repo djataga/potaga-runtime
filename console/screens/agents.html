@@ -1,0 +1,38 @@
+<section class="screen" id="scr-agents">
+  <div class="shead">
+    <h1>Agents</h1>
+    <p>Six specialized sessions, each built as shared preamble + role prompt at a fixed <span class="mono">(model, effort)</span> pair. Agents never message each other — coordination flows through the plan and partitioned stores.</p>
+  </div>
+  <div class="grid g2">
+    <div class="card agentcard" data-spec>
+      <span class="spectag" data-specid="SPEC-12">SPEC-12</span>
+      <div class="chead"><span class="agent a-architect">Architect</span><span class="sub">01_architect.md · v4.1</span></div>
+      <div class="cbody"><div class="roles">System design · ADRs · binding contracts · decomposition. L2 conflict authority.</div><div class="klist"><div class="k"><span class="kk">Primary</span><span><span class="chip m-sonnet">sonnet-5 @ high</span></span></div><div class="k"><span class="kk">Fallback</span><span><span class="chip m-opus">opus-4.8 @ medium</span> <small style="color:var(--muted)">complex multi-service</small></span></div><div class="k"><span class="kk">Tools</span><span>Web search · Memory RW <span class="mono">potaga-shared</span> · no code exec</span></div></div><div class="directive">No gold-plating — every abstraction must name the stated requirement it satisfies. Published contracts are binding; changes require a superseding ADR.</div></div>
+    </div>
+
+    <div class="card agentcard">
+      <div class="chead"><span class="agent a-coder">Coder</span><span class="sub">02_coder.md · v4.1</span></div>
+      <div class="cbody"><div class="roles">Implementation · refactoring · scaffolding · frontend/UI. Never designs.</div><div class="klist"><div class="k"><span class="kk">Primary</span><span><span class="chip m-sonnet">sonnet-5 @ high</span></span></div><div class="k"><span class="kk">Fallbacks</span><span><span class="chip m-glm">glm-5.2 (UI)</span> <span class="chip m-opus">opus-4.8 (hardest)</span></span></div><div class="k"><span class="kk">Tools</span><span>Sandbox exec · pkg manager (pinned, approved) · Memory RW <span class="mono">potaga-code</span></span></div></div><div class="directive">Sandbox is mandatory — no subtask completes untested. Contract disputes raise a conflict card; never silently fix the contract.</div></div>
+    </div>
+
+    <div class="card agentcard">
+      <div class="chead"><span class="agent a-tester">Tester</span><span class="sub">03_tester.md · v4.1</span></div>
+      <div class="cbody"><div class="roles">Unit · integration · e2e. Quality gate on correctness and ≥70% coverage.</div><div class="klist"><div class="k"><span class="kk">Primary</span><span><span class="chip m-sonnet">sonnet-5 @ medium–high</span></span></div><div class="k"><span class="kk">Fallback</span><span><span class="chip m-glm">glm-5.2 @ High</span> <small style="color:var(--muted)">&gt;20-file volume</small></span></div><div class="k"><span class="kk">Tools</span><span>Sandbox exec · Memory RW <span class="mono">potaga-tests</span>, R <span class="mono">potaga-code</span></span></div></div><div class="directive">Security edge cases are always in scope, even unnamed. Never weaken a suite to make it pass.</div></div>
+    </div>
+
+    <div class="card agentcard">
+      <div class="chead"><span class="agent a-reviewer">Reviewer</span><span class="sub">04_reviewer.md · v4.1</span></div>
+      <div class="cbody"><div class="roles">Merge-blocking quality &amp; security gate. OWASP audit, CVE lookups, scope enforcement (&gt;1.3× auto-reject).</div><div class="klist"><div class="k"><span class="kk">Primary</span><span><span class="chip m-sol">sol @ ultra</span> <small style="color:var(--muted)">preview-gated, ×3.5</small></span></div><div class="k"><span class="kk">Fallbacks</span><span><span class="chip m-opus">opus-4.8 @ high</span> → <span class="chip m-sonnet">sonnet-5 @ high</span></span></div><div class="k"><span class="kk">Tools</span><span>Static analysis · web search (CVEs) · Memory W <span class="mono">potaga-reviews</span></span></div></div><div class="directive">Verify, don't trust — if you didn't run it, you didn't review it. Safeguard refusals are recorded verbatim and never rephrased around.</div></div>
+    </div>
+
+    <div class="card agentcard">
+      <div class="chead"><span class="agent a-docs">Docs</span><span class="sub">05_docs.md · v4.1</span></div>
+      <div class="cbody"><div class="roles">README · OpenAPI 3.1 · ADR narratives · changelogs. Documents what exists.</div><div class="klist"><div class="k"><span class="kk">Primary</span><span><span class="chip m-sonnet">sonnet-5 @ medium</span></span></div><div class="k"><span class="kk">Fallback</span><span><span class="chip m-glm">glm-5.2 @ High</span> <small style="color:var(--muted)">bulk / multilingual</small></span></div><div class="k"><span class="kk">Tools</span><span>Code exec (verify examples) · Memory RW <span class="mono">potaga-docs</span></span></div></div><div class="directive">Every example runs in the sandbox before publishing. Zero-behavior-change diff — a docs task never alters code semantics.</div></div>
+    </div>
+
+    <div class="card agentcard">
+      <div class="chead"><span class="agent a-research">Research</span><span class="sub">06_research.md · v4.1</span></div>
+      <div class="cbody"><div class="roles">Docs lookup · ecosystem surveys · CVE checks. Compares options; never recommends.</div><div class="klist"><div class="k"><span class="kk">Primary</span><span><span class="chip m-terra">terra @ standard</span> <small style="color:var(--muted)">preview-gated</small></span></div><div class="k"><span class="kk">Fallbacks</span><span><span class="chip m-sol">sol @ base</span> → <span class="chip m-sonnet">sonnet-5 @ high</span></span></div><div class="k"><span class="kk">Tools</span><span>Web search · computer use · Memory RW <span class="mono">potaga-research</span></span></div></div><div class="directive">Retrieve before asserting — every technical fact carries a source URL and retrieval date. No credentials, ever.</div></div>
+    </div>
+  </div>
+</section>
