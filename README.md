@@ -70,6 +70,14 @@ With Phase 6, all ten policy points of `prompts/07_orchestrator.md` §B have run
 behind them. Remaining beyond the roadmap: true parallel dispatch (the waiting-cycle
 scanner from Phase 5 is ready for it) and container-grade sandbox isolation.
 
+## Live-run harness & eval set
+
+`eval/` contains six small, verifiable project prompts with success criteria and
+per-item cost ceilings, plus a harness that runs them through the real
+Orchestrator and reports cost, gates, and observed loop multipliers — see
+`eval/README.md`. Dry mode validates the harness offline; live mode is the first
+real-model milestone.
+
 ## Console
 
 `console/` holds the operator UI (moved from the prompt-pack repo, which is
@@ -114,7 +122,7 @@ degrades gracefully). Check current model names at https://docs.claude.com.
 POTAGA_REPO=/path/to/potaga python -m pytest tests/ -q
 ```
 
-59 tests, offline (sandbox tests run real subprocesses): config invariants (including rejection of the dead-xhigh config the
+61 tests, offline (sandbox tests run real subprocesses): config invariants (including rejection of the dead-xhigh config the
 v4.2 audit fixed), pricing-epoch switching, multiplier math, degraded-mode routing, the
 security floor, plan parsing and single-writer rendering, store grants and path-escape
 protection, and an end-to-end dry run asserting artifacts, provenance, statuses, and the

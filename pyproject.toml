@@ -1,6 +1,6 @@
 [project]
 name = "potaga-runtime"
-version = "0.6.1"
+version = "0.7.0"
 description = "Phase-1 reference runtime for the Potaga prompt pack (dispatch path wired end-to-end)"
 requires-python = ">=3.10"
 dependencies = ["pyyaml>=6.0"]
@@ -12,6 +12,9 @@ dev = ["pytest>=8"]
 
 [project.scripts]
 potaga = "potaga_runtime.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["potaga_runtime*"]
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -1,0 +1,64 @@
+# Potaga live-run eval set v1.
+# Small, verifiable projects with explicit success criteria and per-item cost
+# ceilings. Dry-run mode validates the harness itself (the mock decomposer
+# always emits the same 3-task plan); live mode is where these prompts earn
+# their keep — measuring plan-schema adherence, status discipline, gate
+# outcomes, cost, and the observed loop multiplier against real models.
+items:
+  - id: hello_cli
+    prompt: "Build a Python CLI that prints a greeting; accept a --name flag with a sensible default."
+    ceiling_usd: 1.50
+    criteria:
+      require_complete: true
+      min_completed_tasks: 2
+      max_cost_usd: 1.50
+      artifact_globs: ["potaga-code/**/*"]
+
+  - id: todo_cli
+    prompt: "Build a Python todo-list CLI with add, list, done, and remove commands, persisting to a JSON file."
+    ceiling_usd: 3.00
+    criteria:
+      require_complete: true
+      min_completed_tasks: 2
+      max_cost_usd: 3.00
+      artifact_globs: ["potaga-code/**/*", "potaga-tests/**/*"]
+
+  - id: rest_api_auth
+    prompt: "Build a REST API for a task management app with JWT authentication and PostgreSQL."
+    ceiling_usd: 5.00
+    criteria:
+      require_complete: true
+      min_completed_tasks: 3
+      max_cost_usd: 5.00
+      artifact_globs: ["potaga-code/**/*"]
+      forbid_events: ["safeguard-refusal"]
+
+  - id: csv_report
+    prompt: "Write a Python script that reads a CSV of sales rows (date, region, amount) and prints total and per-region summaries."
+    ceiling_usd: 2.00
+    criteria:
+      require_complete: true
+      min_completed_tasks: 2
+      max_cost_usd: 2.00
+      artifact_globs: ["potaga-code/**/*"]
+
+  - id: string_utils_lib
+    prompt: "Create a small Python library with slugify and truncate_words functions, plus unit tests for both."
+    ceiling_usd: 2.00
+    criteria:
+      require_complete: true
+      min_completed_tasks: 2
+      max_cost_usd: 2.00
+      artifact_globs: ["potaga-code/**/*", "potaga-tests/**/*"]
+
+  - id: bugfix_snippet
+    prompt: >
+      Fix this function so it handles an empty list without raising, and add a
+      regression test:
+      def average(xs): return sum(xs) / len(xs)
+    ceiling_usd: 1.50
+    criteria:
+      require_complete: true
+      min_completed_tasks: 2
+      max_cost_usd: 1.50
+      artifact_globs: ["potaga-code/**/*"]

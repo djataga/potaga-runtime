@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: potaga-runtime
+Version: 0.7.0
+Summary: Phase-1 reference runtime for the Potaga prompt pack (dispatch path wired end-to-end)
+Requires-Python: >=3.10
+Requires-Dist: pyyaml>=6.0
+Provides-Extra: anthropic
+Requires-Dist: anthropic>=0.34; extra == "anthropic"
+Provides-Extra: openai-compat
+Requires-Dist: openai>=1.40; extra == "openai-compat"
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"

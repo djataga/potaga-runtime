@@ -1,0 +1,10 @@
+pyyaml>=6.0
+
+[anthropic]
+anthropic>=0.34
+
+[dev]
+pytest>=8
+
+[openai-compat]
+openai>=1.40
